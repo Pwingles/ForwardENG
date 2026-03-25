@@ -1,13 +1,13 @@
 {
   "title": "Forward English Widgets",
-  "description": "English-translated Forward widgets — all UI, titles, and genres in English",
+  "description": "English-translated Forward widgets",
   "icon": "https://assets.vvebo.vip/scripts/icon.png",
   "widgets": [
     {
       "id": "forward.nlsearch.en",
       "title": "AI Search",
-      "description": "Describe what you want to watch in plain English — AI finds matching results",
-      "requiredVersion": "0.0.2",
+      "description": "Describe what you want to watch in plain English, AI finds matching results",
+      "requiredVersion": "0.0.1",
       "version": "1.1.0",
       "author": "ForwardENG",
       "url": "https://raw.githubusercontent.com/Pwingles/ForwardENG/main/widgets/nlsearch.js"

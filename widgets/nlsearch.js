@@ -56,8 +56,8 @@ WidgetMetadata = {
   requiredVersion: "0.0.1",
   description:
     "Describe what you want to watch in plain English — AI understands your intent and finds matching results. Daily usage is limited; Pro users get a higher quota.",
-  author: "Forward",
-  site: "https://github.com/InchStudio/ForwardWidgets",
+  author: "ForwardENG",
+  site: "https://github.com/Pwingles/ForwardENG",
   modules: [
     {
       id: "aiDiscover",
