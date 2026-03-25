@@ -1,0 +1,43 @@
+{
+  "title": "Forward English Widgets",
+  "description": "English-translated Forward widgets — all UI, titles, and genres in English",
+  "icon": "https://assets.vvebo.vip/scripts/icon.png",
+  "widgets": [
+    {
+      "id": "forward.nlsearch.en",
+      "title": "AI Search",
+      "description": "Describe what you want to watch in plain English — AI finds matching results",
+      "requiredVersion": "0.0.2",
+      "version": "1.1.0",
+      "author": "ForwardENG",
+      "url": "https://raw.githubusercontent.com/Pwingles/ForwardENG/main/widgets/nlsearch.js"
+    },
+    {
+      "id": "forward.trendingmedia.en",
+      "title": "Trending Media",
+      "description": "Browse trending movies, TV shows, and variety programs",
+      "requiredVersion": "0.0.1",
+      "version": "1.0.0",
+      "author": "ForwardENG",
+      "url": "https://raw.githubusercontent.com/Pwingles/ForwardENG/main/widgets/trendingmedia.js"
+    },
+    {
+      "id": "forward.bangumi.en",
+      "title": "Anime Schedule",
+      "description": "Browse trending anime and daily broadcast schedule",
+      "requiredVersion": "0.0.1",
+      "version": "1.0.0",
+      "author": "ForwardENG",
+      "url": "https://raw.githubusercontent.com/Pwingles/ForwardENG/main/widgets/bangumi.js"
+    },
+    {
+      "id": "forward.danmu.en",
+      "title": "Bullet Comments",
+      "description": "Fetch bullet comments (danmu) from a specified server",
+      "requiredVersion": "0.0.2",
+      "version": "1.0.2",
+      "author": "ForwardENG",
+      "url": "https://raw.githubusercontent.com/Pwingles/ForwardENG/main/widgets/danmu.js"
+    }
+  ]
+}
