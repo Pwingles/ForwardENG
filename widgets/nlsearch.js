@@ -1,5 +1,5 @@
 /**
- * AI Natural-Language Movie & TV Search
+ * AI Natural-Language Movie & TV Search (English)
  *
  * Users type a plain-English description (e.g. "high-rated sci-fi from last year",
  * "movies like Inception", "films directed by Nolan") and the backend LLM parses
@@ -10,8 +10,47 @@
 
 const API_BASE = "https://fluxapi.vvebo.vip/v1/nlsearch";
 
+const GENRE_ZH_TO_EN = {
+  "动作": "Action",
+  "冒险": "Adventure",
+  "动画": "Animation",
+  "喜剧": "Comedy",
+  "犯罪": "Crime",
+  "纪录": "Documentary",
+  "剧情": "Drama",
+  "家庭": "Family",
+  "奇幻": "Fantasy",
+  "历史": "History",
+  "恐怖": "Horror",
+  "音乐": "Music",
+  "悬疑": "Mystery",
+  "爱情": "Romance",
+  "科幻": "Science Fiction",
+  "电视电影": "TV Movie",
+  "惊悚": "Thriller",
+  "战争": "War",
+  "西部": "Western",
+  "动作冒险": "Action & Adventure",
+  "儿童": "Kids",
+  "新闻": "News",
+  "真人秀": "Reality",
+  "肥皂剧": "Soap",
+  "脱口秀": "Talk",
+  "战争与政治": "War & Politics",
+};
+
+function translateGenres(genreStr) {
+  if (!genreStr) return "";
+  return genreStr
+    .split(/[,，、\s]+/)
+    .map(g => g.trim())
+    .filter(Boolean)
+    .map(g => GENRE_ZH_TO_EN[g] || g)
+    .join(", ");
+}
+
 WidgetMetadata = {
-  id: "forward.nlsearch",
+  id: "forward.nlsearch.en",
   title: "AI Search",
   version: "1.1.0",
   requiredVersion: "0.0.1",
@@ -103,7 +142,11 @@ async function nlSearch(params = {}) {
       throw new Error((data && data.message) || "Search failed");
     }
 
-    return data.data || [];
+    const results = data.data || [];
+    return results.map(item => {
+      if (item.genreTitle) item.genreTitle = translateGenres(item.genreTitle);
+      return item;
+    });
   } catch (error) {
     console.error("[AI Search] Request failed:", error.message || error);
     throw new Error("AI Search is temporarily unavailable — please try again later");
