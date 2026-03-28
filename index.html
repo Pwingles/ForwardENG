@@ -687,6 +687,16 @@ const CATALOGS = [
   { title:"Popular Movies",   endpoint:"/movie/popular" },
   { title:"Top Rated Movies", endpoint:"/movie/top_rated" },
   { title:"Upcoming",         endpoint:"/movie/upcoming" },
+  {
+    title: "Latest Horror",
+    endpoint: "/discover/movie",
+    params: {
+      with_genres: "27",
+      sort_by: "primary_release_date.desc",
+      "vote_count.gte": "40",
+      include_adult: "false",
+    },
+  },
   { title:"Trending TV",      endpoint:"/trending/tv/week" },
   { title:"Popular TV",       endpoint:"/tv/popular" },
   { title:"Top Rated TV",     endpoint:"/tv/top_rated" },
@@ -992,6 +1002,7 @@ const CATALOG_TITLE_ES = {
   "Popular Movies": "Películas populares",
   "Top Rated Movies": "Películas mejor valoradas",
   "Upcoming": "Próximos estrenos",
+  "Latest Horror": "Último terror",
   "Trending TV": "Series en tendencia",
   "Popular TV": "Series populares",
   "Top Rated TV": "Series mejor valoradas",
@@ -1346,7 +1357,7 @@ async function loadCatalogs() {
     const row = createRowSkeleton(localizedCatalogTitle(cat.title));
     container.appendChild(row);
     try {
-      const data = await tmdbFetch(cat.endpoint);
+      const data = await tmdbFetch(cat.endpoint, cat.params || {});
       renderRowCards(row, (data.results || []).map(normalizeItem));
     } catch (err) {
       row.querySelector(".row-scroll,.row-loading").innerHTML =
