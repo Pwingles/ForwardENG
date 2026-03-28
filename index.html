@@ -270,6 +270,7 @@ input,select{font-family:inherit}
 .btn-trakt-action{padding:8px 18px;border-radius:20px;font-size:.75rem;font-weight:600;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text-dim);transition:all .2s;display:flex;align-items:center;gap:6px}
 .btn-trakt-action:hover{background:rgba(255,255,255,.08);color:var(--text)}
 .btn-trakt-action.active{background:rgba(237,28,36,.15);border-color:rgba(237,28,36,.3);color:#ed1c24}
+.btn-trakt-action.active svg{fill:#ed1c24}
 .btn-trakt-action svg{width:14px;height:14px}
 
 /* ── SEARCH RESULTS ── */
@@ -515,6 +516,8 @@ let traktClientId = localStorage.getItem("trakt_client_id") || "";
 let traktClientSecret = localStorage.getItem("trakt_client_secret") || "";
 let traktAccessToken = localStorage.getItem("trakt_access_token") || "";
 let traktRefreshToken = localStorage.getItem("trakt_refresh_token") || "";
+let traktWatchedSet = new Set();
+let traktWatchlistSet = new Set();
 let aiMode = false;
 let searchTimeout = null;
 
@@ -547,6 +550,7 @@ function init() {
     document.getElementById("setupScreen").style.display = "none";
     document.getElementById("mainContent").style.display = "block";
     loadCatalogs();
+    if (traktAccessToken) loadTraktData();
   }
   bindEvents();
 }
@@ -897,6 +901,7 @@ async function openModal(item) {
   document.getElementById("btnTraktWatched").classList.remove("active");
 
   o.classList.add("open");
+  updateTraktButtons();
 
   if (!apiKey || !item.id || !item.mediaType) return;
 
@@ -928,6 +933,7 @@ async function openModal(item) {
         currentImdbId = ext.imdb_id || null;
       } catch (_) {}
     }
+    updateTraktButtons();
 
     // Trailer
     const trailers = (videos.results || []).filter(
@@ -1757,6 +1763,7 @@ async function startTraktAuth() {
           localStorage.setItem("trakt_refresh_token", traktRefreshToken);
           status.className = "trakt-status connected";
           status.innerHTML = "✓ Connected to Trakt";
+          loadTraktData();
         }
       } catch (_) {}
     }, pollInterval);
@@ -1805,6 +1812,78 @@ async function refreshTraktToken() {
   return false;
 }
 
+async function loadTraktData() {
+  if (!traktAccessToken) return;
+  try {
+    const [wm, ws, wlm, wls] = await Promise.all([
+      traktFetch("/sync/watched/movies").then(r => r.ok ? r.json() : []),
+      traktFetch("/sync/watched/shows").then(r => r.ok ? r.json() : []),
+      traktFetch("/users/me/watchlist/movies?sort=added").then(r => r.ok ? r.json() : []),
+      traktFetch("/users/me/watchlist/shows?sort=added").then(r => r.ok ? r.json() : [])
+    ]);
+    traktWatchedSet.clear();
+    traktWatchlistSet.clear();
+    wm.forEach(i => { if (i.movie?.ids?.imdb) traktWatchedSet.add(i.movie.ids.imdb); });
+    ws.forEach(i => { if (i.show?.ids?.imdb) traktWatchedSet.add(i.show.ids.imdb); });
+    wlm.forEach(i => { if (i.movie?.ids?.imdb) traktWatchlistSet.add(i.movie.ids.imdb); });
+    wls.forEach(i => { if (i.show?.ids?.imdb) traktWatchlistSet.add(i.show.ids.imdb); });
+
+    loadTraktRows([...wlm, ...wls]);
+  } catch (e) { console.warn("Trakt sync:", e); }
+}
+
+async function loadTraktRows(watchlistItems) {
+  if (!watchlistItems.length) return;
+  const grid = document.getElementById("catalogRows");
+  if (!grid) return;
+
+  const row = createRowSkeleton("My Trakt Watchlist");
+  grid.insertBefore(row, grid.firstChild);
+
+  const cards = [];
+  const batch = watchlistItems.slice(0, 20);
+  for (const entry of batch) {
+    const obj = entry.movie || entry.show;
+    const mtype = entry.movie ? "movie" : "tv";
+    const tmdbId = obj?.ids?.tmdb;
+    if (!tmdbId) continue;
+    try {
+      const d = await tmdbFetch(`/${mtype}/${tmdbId}`);
+      cards.push(createCard({
+        id: d.id,
+        title: d.title || d.name,
+        posterPath: d.poster_path,
+        rating: d.vote_average,
+        releaseDate: d.release_date || d.first_air_date,
+        mediaType: mtype,
+        genreIds: (d.genres || []).map(g => g.id)
+      }));
+    } catch (_) {}
+  }
+
+  const scrollArea = document.createElement("div");
+  scrollArea.className = "row-scroll";
+  cards.forEach(c => scrollArea.appendChild(c));
+  row.querySelector(".row-loading")?.remove();
+  row.appendChild(scrollArea);
+}
+
+function updateTraktButtons() {
+  if (!traktAccessToken) return;
+  const wlBtn = document.getElementById("btnTraktWatchlist");
+  const whBtn = document.getElementById("btnTraktWatched");
+  if (currentImdbId && traktWatchlistSet.has(currentImdbId)) {
+    wlBtn.classList.add("active");
+  } else {
+    wlBtn.classList.remove("active");
+  }
+  if (currentImdbId && traktWatchedSet.has(currentImdbId)) {
+    whBtn.classList.add("active");
+  } else {
+    whBtn.classList.remove("active");
+  }
+}
+
 async function toggleTraktWatchlist() {
   if (!traktAccessToken || !currentItem || !currentImdbId) return;
   const btn = document.getElementById("btnTraktWatchlist");
@@ -1816,9 +1895,11 @@ async function toggleTraktWatchlist() {
     if (isActive) {
       await traktFetch("/sync/watchlist/remove", { method: "POST", body: JSON.stringify(body) });
       btn.classList.remove("active");
+      traktWatchlistSet.delete(currentImdbId);
     } else {
       await traktFetch("/sync/watchlist", { method: "POST", body: JSON.stringify(body) });
       btn.classList.add("active");
+      traktWatchlistSet.add(currentImdbId);
     }
   } catch (_) {}
 }
@@ -1834,9 +1915,11 @@ async function toggleTraktWatched() {
     if (isActive) {
       await traktFetch("/sync/history/remove", { method: "POST", body: JSON.stringify(body) });
       btn.classList.remove("active");
+      traktWatchedSet.delete(currentImdbId);
     } else {
       await traktFetch("/sync/history", { method: "POST", body: JSON.stringify(body) });
       btn.classList.add("active");
+      traktWatchedSet.add(currentImdbId);
     }
   } catch (_) {}
 }
