@@ -100,6 +100,10 @@ input,select{font-family:inherit}
 .rating-mid{color:var(--yellow)}
 .rating-low{color:var(--red)}
 .card-badge{position:absolute;top:8px;right:8px;padding:2px 7px;border-radius:6px;font-size:.58rem;font-weight:700;background:rgba(0,0,0,.55);color:rgba(255,255,255,.85);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1)}
+.card-lang{position:absolute;top:8px;left:8px;padding:2px 6px;border-radius:6px;font-size:.56rem;font-weight:800;letter-spacing:.5px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12)}
+.card-lang-es{background:rgba(205,50,50,.6);color:#fff}
+.card-lang-ja{background:rgba(80,80,200,.6);color:#fff}
+.card-lang-ko{background:rgba(60,140,180,.6);color:#fff}
 .cw-card{flex:0 0 280px;border-radius:14px;overflow:hidden;cursor:pointer;background:var(--card);transition:transform .25s,box-shadow .25s;position:relative}
 .cw-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,.5)}
 .cw-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#1a1a1a}
@@ -828,10 +832,15 @@ function createCard(item) {
   card.className = "card";
   const rc = item.rating >= 7 ? "rating-high" : item.rating >= 5 ? "rating-mid" : "rating-low";
   const year = item.releaseDate ? item.releaseDate.substring(0, 4) : "";
+  const lang = (item.originalLanguage || "").toLowerCase();
+  const langBadges = { es: "ES", ja: "JA", ko: "KO", zh: "ZH", fr: "FR", de: "DE", pt: "PT", it: "IT", hi: "HI" };
+  const langLabel = langBadges[lang] || "";
+  const langClass = lang === "es" ? "card-lang-es" : lang === "ja" ? "card-lang-ja" : lang === "ko" ? "card-lang-ko" : "card-lang-es";
   if (item.posterPath) {
     card.innerHTML = `
       <div class="card-poster">
         <img class="card-img" src="${TMDB_IMG}w342${item.posterPath}" alt="${esc(item.title)}" loading="lazy">
+        ${langLabel && lang !== "en" ? `<div class="card-lang ${langClass}">${langLabel}</div>` : ""}
         ${item.mediaType ? `<div class="card-badge">${item.mediaType === "tv" ? "TV" : "Film"}</div>` : ""}
       </div>
       <div class="card-info">
@@ -1079,20 +1088,22 @@ function parseQuality(title) {
   return "Other";
 }
 
-const FOREIGN_AUDIO_RE = /\b(italian|ita|french|fra|fre|spanish|spa|german|deu|ger|portuguese|por|russian|rus|hindi|hin|arabic|ara|turkish|tur|polish|pol|dutch|nld|dut|korean|kor|chinese|zho|chi|thai|tha|czech|ces|romanian|ron|hungarian|hun|swedish|swe|danish|dan|norwegian|nor|finnish|fin|greek|ell|hebrew|heb|vietnamese|vie|indonesian|ind|malay|msa|bulgarian|bul|croatian|hrv|serbian|srp|ukrainian|ukr|tamil|telugu|kannada|malayalam)\b/i;
+const FOREIGN_AUDIO_RE = /\b(italian|ita|french|fra|fre|german|deu|ger|portuguese|por|russian|rus|hindi|hin|arabic|ara|turkish|tur|polish|pol|dutch|nld|dut|korean|kor|chinese|zho|chi|thai|tha|czech|ces|romanian|ron|hungarian|hun|swedish|swe|danish|dan|norwegian|nor|finnish|fin|greek|ell|hebrew|heb|vietnamese|vie|indonesian|ind|malay|msa|bulgarian|bul|croatian|hrv|serbian|srp|ukrainian|ukr|tamil|telugu|kannada|malayalam)\b/i;
 
 function audioScore(title) {
   const t = (title || "").toLowerCase();
   const isDual = /dual.?audio|multi/i.test(t);
   const isEnglish = /english|eng\b|en\b/i.test(t);
+  const isSpanish = /spanish|spa\b|español|latino/i.test(t);
   const hasForeign = FOREIGN_AUDIO_RE.test(t);
 
   if (currentIsAnime) {
     const isJpn = /japanese|jpn|ja\b/i.test(t);
     if (isJpn && !isDual) return 0;
     if (isDual) return 1;
-    if (hasForeign && !isEnglish) return 10;
-    return 2;
+    if (isEnglish || isSpanish) return 2;
+    if (hasForeign) return 10;
+    return 3;
   }
 
   if (currentOriginalLang && currentOriginalLang !== "en") {
@@ -1100,14 +1111,16 @@ function audioScore(title) {
     const origRe = new RegExp("\\b" + currentOriginalLang + "\\b", "i");
     if (origRe.test(t)) return 1;
     if (isEnglish) return 2;
+    if (isSpanish) return 3;
     if (hasForeign) return 10;
-    return 3;
+    return 4;
   }
 
   if (isEnglish && !hasForeign) return 0;
   if (isEnglish && isDual) return 0;
   if (isDual) return 1;
-  if (!hasForeign) return 2;
+  if (isSpanish) return 2;
+  if (!hasForeign) return 3;
   return 10;
 }
 
@@ -1377,10 +1390,10 @@ async function fetchSubtitles(type, streamId) {
     const allSubs = data.subtitles || [];
     currentSubtitles = allSubs.filter(s => {
       const lang = (s.lang || s.SubLanguageID || "").toLowerCase();
-      return lang === "eng" || lang === "en";
+      return lang === "eng" || lang === "en" || lang === "spa" || lang === "es";
     });
     if (!currentSubtitles.length) {
-      subList.innerHTML = '<div class="sub-loading">No English subtitles found</div>';
+      subList.innerHTML = '<div class="sub-loading">No English/Spanish subtitles found</div>';
       return;
     }
     renderSubList();
@@ -1655,6 +1668,7 @@ function normalizeItem(r) {
     rating: r.vote_average || 0,
     mediaType: r.media_type || (r.first_air_date ? "tv" : "movie"),
     genreIds: r.genre_ids || [],
+    originalLanguage: r.original_language || "",
   };
 }
 
