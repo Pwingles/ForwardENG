@@ -1113,6 +1113,11 @@ function renderSources(panel, groups) {
 }
 
 // ── VIDEO PLAYER ──
+function onAudioTrackAdd() {
+  probeAudioTracks();
+  autoSelectAudioTrack();
+}
+
 function openPlayer(url, title) {
   if (!url) return;
   const overlay = document.getElementById("playerOverlay");
@@ -1155,11 +1160,19 @@ function openPlayer(url, title) {
   video.play().catch(() => {});
   showPlayerControls();
 
-  video.addEventListener("loadedmetadata", function onMeta() {
-    video.removeEventListener("loadedmetadata", onMeta);
+  video.addEventListener("loadedmetadata", () => {
     probeAudioTracks();
     autoSelectAudioTrack();
   }, { once: true });
+
+  video.addEventListener("canplay", () => {
+    probeAudioTracks();
+    autoSelectAudioTrack();
+  }, { once: true });
+
+  if (video.audioTracks) {
+    video.audioTracks.addEventListener("addtrack", onAudioTrackAdd);
+  }
 
   // fetch subtitles in background
   if (currentImdbId) {
@@ -1177,6 +1190,9 @@ function closePlayer() {
   const video = document.getElementById("playerVideo");
   overlay.classList.remove("open");
   video.pause();
+  if (video.audioTracks) {
+    video.audioTracks.removeEventListener("addtrack", onAudioTrackAdd);
+  }
   video.removeAttribute("src");
   video.load();
   if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
@@ -1410,7 +1426,7 @@ function probeAudioTracks() {
   const list = document.getElementById("audioList");
   const tracks = getAudioTracks();
   if (!tracks.length) {
-    list.innerHTML = '<div class="sub-loading">No switchable audio tracks detected</div>';
+    list.innerHTML = '<div class="sub-loading">No audio tracks detected</div>';
     return;
   }
   renderAudioList(tracks);
@@ -1418,7 +1434,7 @@ function probeAudioTracks() {
 
 function getAudioTracks() {
   const tracks = [];
-  if (hlsInstance && hlsInstance.audioTracks && hlsInstance.audioTracks.length > 1) {
+  if (hlsInstance && hlsInstance.audioTracks && hlsInstance.audioTracks.length > 0) {
     hlsInstance.audioTracks.forEach((t, i) => {
       tracks.push({
         index: i,
@@ -1430,7 +1446,7 @@ function getAudioTracks() {
     });
   } else {
     const video = document.getElementById("playerVideo");
-    if (video.audioTracks && video.audioTracks.length > 1) {
+    if (video.audioTracks && video.audioTracks.length > 0) {
       for (let i = 0; i < video.audioTracks.length; i++) {
         const t = video.audioTracks[i];
         tracks.push({
