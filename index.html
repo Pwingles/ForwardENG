@@ -149,6 +149,10 @@ input,select{font-family:inherit}
 
 /* ── ACTIONS BAR ── */
 .modal-actions{display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap}
+.quality-picker{display:flex;justify-content:center;gap:8px;margin-bottom:8px}
+.qp-btn{padding:8px 18px;border-radius:20px;font-size:.78rem;font-weight:600;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--text-dim);transition:all .2s;cursor:pointer}
+.qp-btn:hover{background:rgba(255,255,255,.08);color:var(--text)}
+.qp-btn.active{background:#fff;color:#111;border-color:#fff;font-weight:700}
 .btn-watch{flex:1;padding:14px 24px;border-radius:28px;background:#fff;color:#111;font-weight:600;font-size:.92rem;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .25s;box-shadow:0 2px 12px rgba(255,255,255,.08)}
 .btn-watch:hover{box-shadow:0 4px 20px rgba(255,255,255,.15)}
 .btn-watch svg{width:18px;height:18px;fill:#111}
@@ -396,6 +400,14 @@ input,select{font-family:inherit}
         </button>
       </div>
 
+      <!-- quality selector -->
+      <div class="quality-picker" id="qualityPicker" style="display:none">
+        <button class="qp-btn" data-q="4K">4K</button>
+        <button class="qp-btn" data-q="1080p">1080p</button>
+        <button class="qp-btn" data-q="720p">720p</button>
+        <button class="qp-btn" data-q="480p">480p</button>
+      </div>
+
       <!-- action buttons -->
       <div class="modal-actions" id="modalActions" style="display:none">
         <button class="btn-watch" id="btnWatch">
@@ -620,6 +632,14 @@ function bindEvents() {
   });
   document.getElementById("btnWatch").addEventListener("click", onWatchClick);
   document.getElementById("btnTrailer").addEventListener("click", showTrailer);
+  document.querySelectorAll(".qp-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".qp-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      preferredQuality = btn.dataset.q;
+      localStorage.setItem("preferred_quality", preferredQuality);
+    });
+  });
 
   // Player
   document.getElementById("playerClose").addEventListener("click", closePlayer);
@@ -890,6 +910,7 @@ async function openModal(item) {
   document.getElementById("modalCastTitle").style.display = "none";
 
   document.getElementById("modalActions").style.display = "none";
+  document.getElementById("qualityPicker").style.display = "none";
   document.getElementById("btnTrailer").style.display = "none";
   document.getElementById("episodePicker").classList.remove("visible");
   document.getElementById("sourcePanel").classList.remove("visible");
@@ -944,6 +965,11 @@ async function openModal(item) {
 
     // Show action buttons
     document.getElementById("modalActions").style.display = "flex";
+    const qp = document.getElementById("qualityPicker");
+    qp.style.display = debridUrl ? "flex" : "none";
+    qp.querySelectorAll(".qp-btn").forEach(b => {
+      b.classList.toggle("active", b.dataset.q === preferredQuality);
+    });
 
     // Cast
     if (credits.cast && credits.cast.length) {
