@@ -1016,21 +1016,36 @@ function parseQuality(title) {
   return "Other";
 }
 
+const FOREIGN_AUDIO_RE = /\b(italian|ita|french|fra|fre|spanish|spa|german|deu|ger|portuguese|por|russian|rus|hindi|hin|arabic|ara|turkish|tur|polish|pol|dutch|nld|dut|korean|kor|chinese|zho|chi|thai|tha|czech|ces|romanian|ron|hungarian|hun|swedish|swe|danish|dan|norwegian|nor|finnish|fin|greek|ell|hebrew|heb|vietnamese|vie|indonesian|ind|malay|msa|bulgarian|bul|croatian|hrv|serbian|srp|ukrainian|ukr|tamil|telugu|kannada|malayalam)\b/i;
+
 function audioScore(title) {
   const t = (title || "").toLowerCase();
+  const isDual = /dual.?audio|multi/i.test(t);
+  const isEnglish = /english|eng\b|en\b/i.test(t);
+  const hasForeign = FOREIGN_AUDIO_RE.test(t);
+
   if (currentIsAnime) {
     const isJpn = /japanese|jpn|ja\b/i.test(t);
-    const isDual = /dual.?audio|multi/i.test(t);
     if (isJpn && !isDual) return 0;
     if (isDual) return 1;
+    if (hasForeign && !isEnglish) return 10;
     return 2;
   }
+
   if (currentOriginalLang && currentOriginalLang !== "en") {
-    if (/dual.?audio|multi/i.test(t)) return 0;
-    return 1;
+    if (isDual) return 0;
+    const origRe = new RegExp("\\b" + currentOriginalLang + "\\b", "i");
+    if (origRe.test(t)) return 1;
+    if (isEnglish) return 2;
+    if (hasForeign) return 10;
+    return 3;
   }
-  if (/english|eng\b|en\b/i.test(t) || /dual.?audio|multi/i.test(t)) return 0;
-  return 1;
+
+  if (isEnglish && !hasForeign) return 0;
+  if (isEnglish && isDual) return 0;
+  if (isDual) return 1;
+  if (!hasForeign) return 2;
+  return 10;
 }
 
 function groupByQuality(streams) {
@@ -1283,9 +1298,7 @@ async function fetchSubtitles(type, streamId) {
       return;
     }
     renderSubList();
-    if (currentIsAnime || (currentOriginalLang && currentOriginalLang !== "en")) {
-      loadSubtitleTrack(currentSubtitles[0]);
-    }
+    loadSubtitleTrack(currentSubtitles[0]);
   } catch (err) {
     subList.innerHTML = `<div class="sub-loading">Could not load subtitles</div>`;
   }
@@ -1474,9 +1487,11 @@ function autoSelectAudioTrack() {
   if (currentIsAnime) {
     preferred = tracks.findIndex(t => /^ja/i.test(t.lang) || /japanese|jpn/i.test(t.label));
     if (preferred === -1) preferred = tracks.findIndex(t => /dual|multi/i.test(t.label));
+    if (preferred === -1) preferred = tracks.findIndex(t => /^en/i.test(t.lang) || /english|eng/i.test(t.label));
   } else if (currentOriginalLang && currentOriginalLang !== "en") {
     preferred = tracks.findIndex(t => t.lang.startsWith(currentOriginalLang));
     if (preferred === -1) preferred = tracks.findIndex(t => /dual|multi/i.test(t.label));
+    if (preferred === -1) preferred = tracks.findIndex(t => /^en/i.test(t.lang) || /english|eng/i.test(t.label));
   } else {
     preferred = tracks.findIndex(t => /^en/i.test(t.lang) || /english|eng/i.test(t.label));
   }
