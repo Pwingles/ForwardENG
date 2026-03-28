@@ -15,7 +15,7 @@
   --accent:#6d8cff;--accent-soft:rgba(109,140,255,.14);--accent-glow:#9ab4ff;
   --gold:#e4c06d;--gold-dim:rgba(228,192,109,.12);
   --red:#ef5350;--green:#66bb6a;--yellow:#ffb74d;
-  --radius:16px;--poster-w:158px;
+  --radius:16px;--poster-w:158px;--cw-card-w:288px;
   --glass:rgba(18,18,24,.78);--glass-border:rgba(255,255,255,.07);
   --shadow-sm:0 2px 8px rgba(0,0,0,.35);--shadow-lg:0 24px 64px rgba(0,0,0,.55);
   --ease-out:cubic-bezier(.22,1,.36,1);
@@ -72,12 +72,12 @@ input,select{font-family:inherit}
 .nav-btn{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;transition:all .22s var(--ease-out);border:1px solid transparent}
 .nav-btn:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.08);box-shadow:var(--shadow-sm)}
 .nav-btn svg{width:20px;height:20px;stroke:var(--text-dim)}
-.search-mode-toggle{
+.lang-toggle{
   font-size:.72rem;padding:8px 14px;border-radius:999px;border:1px solid var(--glass-border);
   background:rgba(255,255,255,.04);color:var(--text-dim);transition:all .28s var(--ease-out);white-space:nowrap;font-weight:700;letter-spacing:.06em;text-transform:uppercase
 }
-.search-mode-toggle:hover{color:var(--text);border-color:rgba(255,255,255,.12)}
-.search-mode-toggle.active{
+.lang-toggle:hover{color:var(--text);border-color:rgba(255,255,255,.12)}
+.lang-toggle.active{
   border-color:rgba(109,140,255,.5);color:var(--accent-glow);background:var(--accent-soft);box-shadow:0 0 20px rgba(109,140,255,.15)
 }
 
@@ -152,17 +152,37 @@ input,select{font-family:inherit}
 }
 
 /* ── ROW ── */
-.row{padding:22px 0 6px}
+.row{padding:22px 0 6px;position:relative}
 .row-header{display:flex;align-items:center;padding:0 36px 12px;gap:10px;cursor:default}
 .row-title{font-family:'Syne',sans-serif;font-size:1.08rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:rgba(244,244,247,.92)}
 .row-chevron{color:var(--text-muted);font-size:1.15rem;margin-left:4px;font-weight:400;opacity:.7}
-.row-scroll{display:flex;gap:14px;overflow-x:auto;padding:4px 36px 22px;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;align-items:flex-start}
-.row-scroll::-webkit-scrollbar{height:0;display:none}
+.row-scroll-wrap{position:relative;padding:4px 44px 22px;margin:0 0 0 0}
+.row-scroll{
+  display:flex;gap:14px;overflow-x:auto;overflow-y:hidden;padding:0;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;
+  align-items:stretch;scrollbar-width:none;-ms-overflow-style:none
+}
+.row-scroll::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
+.row-scroll-btn{
+  position:absolute;top:50%;transform:translateY(-50%);z-index:6;width:42px;height:42px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(8,8,12,.75);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.12);color:#fff;transition:opacity .25s var(--ease-out),background .2s,transform .2s;box-shadow:0 8px 24px rgba(0,0,0,.4)
+}
+.row-scroll-btn:hover:not(:disabled){background:rgba(109,140,255,.35);border-color:rgba(109,140,255,.45);transform:translateY(-50%) scale(1.05)}
+.row-scroll-btn:disabled{opacity:.25;cursor:default}
+.row-scroll-btn svg{width:22px;height:22px;stroke:currentColor;stroke-width:2.2}
+.row-scroll-prev{left:2px}
+.row-scroll-next{right:2px}
+.row--continue .row-scroll-wrap{padding-top:8px}
 
 /* ── CARD ── */
-.card{flex:0 0 var(--poster-w);cursor:pointer;transition:transform .4s var(--ease-out),filter .35s;position:relative;overflow:visible}
+.card{
+  flex:0 0 var(--poster-w);width:var(--poster-w);cursor:pointer;transition:transform .4s var(--ease-out),filter .35s;position:relative;overflow:visible;
+  display:flex;flex-direction:column;min-height:calc(var(--poster-w) * 3 / 2 + 46px)
+}
 .card:hover{transform:translateY(-8px) scale(1.02);z-index:2}
 .card-poster{
+  flex:0 0 calc(var(--poster-w) * 3 / 2);width:100%;height:calc(var(--poster-w) * 3 / 2);
   border-radius:var(--radius);overflow:hidden;position:relative;box-shadow:0 4px 20px rgba(0,0,0,.45);
   border:1px solid rgba(255,255,255,.06);transition:box-shadow .4s var(--ease-out),border-color .35s
 }
@@ -170,11 +190,16 @@ input,select{font-family:inherit}
   box-shadow:0 20px 48px rgba(0,0,0,.65),0 0 0 1px rgba(109,140,255,.25),0 0 32px rgba(109,140,255,.12);
   border-color:rgba(109,140,255,.2)
 }
-.card-img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:linear-gradient(160deg,#1a1a22,#12121a)}
-.card-no-img{width:100%;aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;background:var(--card);color:var(--text-dim);font-size:.72rem;text-align:center;padding:8px;border-radius:var(--radius)}
-.card-info{padding:7px 2px 0;height:38px;overflow:hidden}
-.card-title{font-size:.76rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);line-height:1.3}
-.card-meta{font-size:.64rem;color:var(--text-dim);margin-top:1px;display:flex;gap:6px;align-items:center;height:16px}
+.card-img{width:100%;height:100%;object-fit:cover;display:block;background:linear-gradient(160deg,#1a1a22,#12121a)}
+.card-no-img{
+  flex:0 0 calc(var(--poster-w) * 3 / 2);width:100%;height:calc(var(--poster-w) * 3 / 2);display:flex;align-items:center;justify-content:center;
+  background:var(--card);color:var(--text-dim);font-size:.72rem;text-align:center;padding:8px;border-radius:var(--radius)
+}
+.card-info{
+  flex:0 0 46px;min-height:46px;max-height:46px;padding:8px 2px 0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start;box-sizing:border-box
+}
+.card-title{font-size:.76rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);line-height:1.25}
+.card-meta{font-size:.64rem;color:var(--text-dim);margin-top:2px;display:flex;gap:6px;align-items:center;min-height:16px;flex-shrink:0}
 .card-rating{display:inline-flex;align-items:center;gap:2px;font-weight:600;font-size:.64rem}
 .rating-high{color:var(--green)}
 .rating-mid{color:var(--yellow)}
@@ -185,17 +210,21 @@ input,select{font-family:inherit}
 .card-lang-ja{background:rgba(80,80,200,.6);color:#fff}
 .card-lang-ko{background:rgba(60,140,180,.6);color:#fff}
 .cw-card{
-  flex:0 0 288px;border-radius:18px;overflow:hidden;cursor:pointer;
+  flex:0 0 var(--cw-card-w);width:var(--cw-card-w);height:calc(var(--cw-card-w) * 9 / 16 + 82px);min-height:calc(var(--cw-card-w) * 9 / 16 + 82px);
+  border-radius:18px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;
   background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
   border:1px solid rgba(255,255,255,.08);transition:transform .35s var(--ease-out),box-shadow .35s,border-color .35s;position:relative;box-shadow:var(--shadow-sm)
 }
 .cw-card:hover{transform:translateY(-6px);box-shadow:0 20px 50px rgba(0,0,0,.55);border-color:rgba(109,140,255,.2)}
-.cw-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#14141c}
-.cw-info{padding:12px 14px 14px;position:relative}
-.cw-title{font-size:.8rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.01em}
-.cw-sub{font-size:.66rem;color:var(--text-dim);margin-top:4px;display:flex;gap:8px;align-items:center}
+.cw-thumb-wrap{position:relative;flex:0 0 calc(var(--cw-card-w) * 9 / 16);width:100%;height:calc(var(--cw-card-w) * 9 / 16);overflow:hidden;background:#14141c}
+.cw-thumb{width:100%;height:100%;object-fit:cover;display:block}
+.cw-info{
+  flex:1;min-height:82px;max-height:82px;padding:10px 14px 12px;position:relative;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box
+}
+.cw-title{font-size:.8rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.01em;line-height:1.25}
+.cw-sub{font-size:.66rem;color:var(--text-dim);margin-top:4px;display:flex;gap:8px;align-items:center;flex-shrink:0}
 .cw-ep{color:var(--accent-glow);font-weight:700}
-.cw-progress{position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(0,0,0,.35)}
+.cw-progress{position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(0,0,0,.35);z-index:2}
 .cw-progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--gold));border-radius:0 3px 0 0;transition:width .3s var(--ease-out);box-shadow:0 0 12px rgba(109,140,255,.35)}
 .cw-play-icon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;background:rgba(0,0,0,.55);border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;backdrop-filter:blur(6px)}
 .cw-card:hover .cw-play-icon{opacity:1}
@@ -440,8 +469,11 @@ input,select{font-family:inherit}
   .hero-desc{-webkit-line-clamp:2;font-size:.78rem}
   .hero-btn{padding:10px 20px;font-size:.8rem}
   .row-header{padding:0 16px 8px}
-  .row-scroll{padding:0 16px 10px;gap:10px}
-  :root{--poster-w:120px}
+  .row-scroll-wrap{padding:0 36px 12px}
+  .row-scroll{gap:10px}
+  .row-scroll-btn{width:36px;height:36px}
+  .row-scroll-btn svg{width:18px;height:18px}
+  :root{--poster-w:120px;--cw-card-w:240px}
   .search-results{padding:80px 16px 16px}
   .modal-body{padding:20px 20px 24px}
   .modal{border-radius:16px}
@@ -460,7 +492,7 @@ input,select{font-family:inherit}
     <input type="text" id="searchInput" placeholder="Search movies & TV shows...">
   </div>
   <div class="nav-right">
-    <button class="search-mode-toggle" id="aiToggle" title="Toggle AI Search">AI</button>
+    <button type="button" class="lang-toggle" id="langToggle" title="Language: English">ENG</button>
     <button class="nav-btn" id="settingsBtn" title="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
@@ -506,11 +538,11 @@ input,select{font-family:inherit}
       <div class="modal-trakt" id="modalTrakt" style="display:none">
         <button class="btn-trakt-action" id="btnTraktWatchlist" title="Add to Trakt Watchlist">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-          Watchlist
+          <span class="btn-trakt-text">Watchlist</span>
         </button>
         <button class="btn-trakt-action" id="btnTraktWatched" title="Mark as Watched on Trakt">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-          Watched
+          <span class="btn-trakt-text">Watched</span>
         </button>
       </div>
 
@@ -526,10 +558,10 @@ input,select{font-family:inherit}
       <div class="modal-actions" id="modalActions" style="display:none">
         <button class="btn-watch" id="btnWatch">
           <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Play
+          <span id="btnWatchLabel">Play</span>
         </button>
         <button class="btn-trailer" id="btnTrailer" style="display:none">
-          ▶ Trailer
+          <span id="btnTrailerLabel">▶ Trailer</span>
         </button>
       </div>
 
@@ -610,8 +642,8 @@ input,select{font-family:inherit}
 <!-- SETTINGS -->
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-panel">
-    <h2>Settings</h2>
-    <label>Trakt</label>
+    <h2 id="settingsPanelTitle">Settings</h2>
+    <label id="settingsTraktLabel">Trakt</label>
     <div id="traktAuthSection">
       <button class="btn-trakt" id="traktConnectBtn">Login to Trakt</button>
       <div class="trakt-status" id="traktStatus" style="display:none"></div>
@@ -629,12 +661,12 @@ input,select{font-family:inherit}
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_IMG = "https://image.tmdb.org/t/p/";
 const TMDB_KEY = "330ce6497554819b8c235f021cf221ed";
-const FORWARD_AI_URL = "https://fluxapi.vvebo.vip/v1/nlsearch/search";
 const TRAKT_CID = "65e1fbb8f37a3f62b7f43d54bfeb64acec0511803a1f8f46381484ab943649c7";
 const TRAKT_SEC = "71f323143e6110c6615e6d8dcb1ea1c65d1265464a7f63c25465199d1d7d19ab";
 const DEBRIDIO_ADDON_URL = "https://addon.debridio.com/eyJhcGlfa2V5IjoiYmJiMmUzNDJlZjU2NDczMGQxOTY1NDhjOGJlOTFlMTAiLCJwcm92aWRlciI6InJlYWxkZWJyaWQiLCJwcm92aWRlcktleSI6IjQ1UEFBRkoyNDM2RjdVTURYRVA0SldKT0JKMklQRFBORVFZUjJRT1RMUlFNNzZWS0xXTlEiLCJkaXNhYmxlVW5jYWNoZWQiOnRydWUsIm1heFNpemUiOiIiLCJtYXhSZXR1cm5QZXJRdWFsaXR5Ijo2LCJyZXNvbHV0aW9ucyI6WyI0ayIsIjEwODBwIiwiNzIwcCIsIjQ4MHAiLCIzNjBwIiwidW5rbm93biJdLCJleGNsdWRlZFF1YWxpdGllcyI6WyJUZWxlQ2luZSIsIlRlbGVTeW5jIiwiU0NSIiwiQ0FNIl19/manifest.json";
 
 const GENRE_MAP = {28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",14:"Fantasy",36:"History",27:"Horror",10402:"Music",9648:"Mystery",10749:"Romance",878:"Science Fiction",10770:"TV Movie",53:"Thriller",10752:"War",37:"Western",10759:"Action & Adventure",10762:"Kids",10763:"News",10764:"Reality",10766:"Soap",10767:"Talk",10768:"War & Politics"};
+const GENRE_MAP_ES = {28:"Acción",12:"Aventura",16:"Animación",35:"Comedia",80:"Crimen",99:"Documental",18:"Drama",10751:"Familia",14:"Fantasía",36:"Historia",27:"Terror",10402:"Música",9648:"Misterio",10749:"Romance",878:"Ciencia ficción",10770:"Película de TV",53:"Suspense",10752:"Guerra",37:"Western",10759:"Acción y aventura",10762:"Infantil",10763:"Noticias",10764:"Reality",10766:"Telenovela",10767:"Talk show",10768:"Guerra y política"};
 
 const CATALOGS = [
   { title:"Trending Movies",  endpoint:"/trending/movie/week" },
@@ -647,6 +679,276 @@ const CATALOGS = [
   { title:"Top Rated TV",     endpoint:"/tv/top_rated" },
 ];
 
+const UI_LANG_KEY = "fe_ui_lang";
+
+function getUiLang() {
+  return localStorage.getItem(UI_LANG_KEY) === "es" ? "es" : "en";
+}
+
+function getTmdbLanguage() {
+  return getUiLang() === "es" ? "es-ES" : "en-US";
+}
+
+function getSearchPlaceholder() {
+  return getUiLang() === "es"
+    ? "Buscar películas y series..."
+    : "Search movies & TV shows...";
+}
+
+const UI_STR = {
+  en: {
+    navHome: "Back to home",
+    navSettings: "Settings",
+    setupWelcome: "Welcome. Connect Trakt in Settings to sync your watchlist. Streaming is ready to go.",
+    setupGetStarted: "Get Started",
+    setupCalloutTitle: "Chrome or Edge — audio track switching",
+    setupCalloutBody: 'For multiple audio tracks on some files, enable the experimental flag: open chrome://flags or edge://flags, search for Experimental Web Platform features, set it to Enabled, then restart the browser. (Safari often exposes audio tracks without this.)',
+    setupSkip: "Skip for now — browse only",
+    modalPlay: "Play",
+    modalTrailer: "▶ Trailer",
+    modalWatchlist: "Watchlist",
+    modalWatched: "Watched",
+    modalCast: "Cast",
+    playerAudio: "Audio",
+    playerSubs: "Subtitles",
+    playerLoadingAudio: "Detecting audio tracks...",
+    playerLoadingSubs: "Loading subtitles...",
+    subsOff: "Off",
+    settingsTitle: "Settings",
+    settingsTraktLabel: "Trakt",
+    settingsLoginTrakt: "Login to Trakt",
+    settingsDisconnect: "Disconnect",
+    settingsClear: "Clear All",
+    settingsCancel: "Cancel",
+    settingsSave: "Save",
+    heroDetails: "Details",
+    searching: "Searching…",
+    noResults: "No results",
+    tryDifferent: "Try a different search term.",
+    searchFailed: "Search failed",
+    failedLoad: "Failed to load",
+    sourcePlay: "▶ Play",
+    sourceBadge: "RD",
+    seasonEpisodes: "Season {s} ({n} episodes)",
+    epPrefix: "E",
+    episode: "Episode",
+    loadEpFail: "Failed to load episodes",
+    fetchSources: "Fetching sources...",
+    noSourcesTitle: "No sources found for this title.",
+    noSources: "No sources found.",
+    loadSourcesFail: "Failed to load sources",
+    traktWlTitle: "Add to Trakt Watchlist",
+    traktWatchedTitle: "Mark as Watched on Trakt",
+    searchBack: "← Home",
+    playPause: "Play/Pause (Space)",
+    skipBack: "Back 10s (←)",
+    skipFwd: "Ahead 10s (→)",
+    speedTitle: "Playback speed",
+    audioBtn: "Audio tracks",
+    subsBtn: "Subtitles",
+    pipTitle: "Picture-in-Picture",
+    fsTitle: "Fullscreen (F)",
+    volTitle: "Volume",
+    searchResultsHeading: "Search",
+    noAudioTracks: "No audio tracks detected",
+    noSubsFound: "No English/Spanish subtitles found",
+    subLoadError: "Could not load subtitles",
+    loadingEpisodes: "Loading episodes...",
+    alertNoImdb: "No IMDB ID found for this title.",
+    alertNoDebrid: "Streaming is not configured.",
+    alertSelectEp: "Select an episode first."
+  },
+  es: {
+    navHome: "Volver al inicio",
+    navSettings: "Ajustes",
+    setupWelcome: "Bienvenido. Conecta Trakt en Ajustes para sincronizar tu lista. El streaming ya está listo.",
+    setupGetStarted: "Empezar",
+    setupCalloutTitle: "Chrome u Edge — cambiar pista de audio",
+    setupCalloutBody: "Para varias pistas de audio en algunos archivos, activa la opción experimental: abre chrome://flags o edge://flags, busca Experimental Web Platform features, ponla en Enabled y reinicia el navegador. (Safari suele mostrar pistas sin esto.)",
+    setupSkip: "Omitir por ahora — solo explorar",
+    modalPlay: "Reproducir",
+    modalTrailer: "▶ Tráiler",
+    modalWatchlist: "Lista",
+    modalWatched: "Visto",
+    modalCast: "Reparto",
+    playerAudio: "Audio",
+    playerSubs: "Subtítulos",
+    playerLoadingAudio: "Detectando pistas de audio...",
+    playerLoadingSubs: "Cargando subtítulos...",
+    subsOff: "Desactivados",
+    settingsTitle: "Ajustes",
+    settingsTraktLabel: "Trakt",
+    settingsLoginTrakt: "Iniciar sesión en Trakt",
+    settingsDisconnect: "Desconectar",
+    settingsClear: "Borrar todo",
+    settingsCancel: "Cancelar",
+    settingsSave: "Guardar",
+    heroDetails: "Detalles",
+    searching: "Buscando…",
+    noResults: "Sin resultados",
+    tryDifferent: "Prueba con otro término.",
+    searchFailed: "La búsqueda falló",
+    failedLoad: "Error al cargar",
+    sourcePlay: "▶ Reproducir",
+    sourceBadge: "RD",
+    seasonEpisodes: "Temporada {s} ({n} episodios)",
+    epPrefix: "E",
+    episode: "Episodio",
+    loadEpFail: "Error al cargar episodios",
+    fetchSources: "Obteniendo fuentes...",
+    noSourcesTitle: "No hay fuentes para este título.",
+    noSources: "No hay fuentes disponibles.",
+    loadSourcesFail: "Error al cargar fuentes",
+    traktWlTitle: "Añadir a la lista de Trakt",
+    traktWatchedTitle: "Marcar como visto en Trakt",
+    searchBack: "← Inicio",
+    playPause: "Reproducir / Pausa (espacio)",
+    skipBack: "Atrás 10 s (←)",
+    skipFwd: "Adelante 10 s (→)",
+    speedTitle: "Velocidad de reproducción",
+    audioBtn: "Pistas de audio",
+    subsBtn: "Subtítulos",
+    pipTitle: "Imagen en imagen",
+    fsTitle: "Pantalla completa (F)",
+    volTitle: "Volumen",
+    searchResultsHeading: "Resultados",
+    noAudioTracks: "No se detectaron pistas de audio",
+    noSubsFound: "No hay subtítulos en inglés o español",
+    subLoadError: "No se pudieron cargar los subtítulos",
+    loadingEpisodes: "Cargando episodios...",
+    alertNoImdb: "No se encontró el ID de IMDB para este título.",
+    alertNoDebrid: "El streaming no está configurado.",
+    alertSelectEp: "Primero elige un episodio."
+  }
+};
+
+function t(key) {
+  const lang = getUiLang() === "es" ? "es" : "en";
+  return (UI_STR[lang] && UI_STR[lang][key]) || UI_STR.en[key] || key;
+}
+
+function seasonOptionLabel(num, epCount) {
+  return t("seasonEpisodes").replace("{s}", String(num)).replace("{n}", String(epCount));
+}
+
+function applyStaticUiStrings() {
+  const g = id => document.getElementById(id);
+  const q = (sel, root) => (root || document).querySelector(sel);
+  g("navHomeBtn") && (g("navHomeBtn").title = t("navHome"));
+  g("settingsBtn") && (g("settingsBtn").title = t("navSettings"));
+  const volIcon = g("volIcon");
+  if (volIcon) volIcon.setAttribute("title", t("volTitle"));
+
+  const setupP = q("#setupScreen > p");
+  if (setupP) setupP.innerHTML = getUiLang() === "es"
+    ? 'Bienvenido. Conecta <strong style="color:var(--text)">Trakt</strong> en Ajustes para sincronizar tu lista. El streaming ya está listo.'
+    : 'Welcome. Connect <strong style="color:var(--text)">Trakt</strong> in Settings to sync your watchlist. Streaming is ready to go.';
+  g("setupSaveBtn") && (g("setupSaveBtn").textContent = t("setupGetStarted"));
+  const callout = q(".setup-callout");
+  if (callout) {
+    callout.innerHTML = getUiLang() === "es"
+      ? `<strong>${t("setupCalloutTitle")}</strong><br>${t("setupCalloutBody")}`
+      : `<strong>${t("setupCalloutTitle")}</strong><br>For multiple audio tracks on some files, enable the experimental flag: open <code>chrome://flags</code> or <code>edge://flags</code>, search for <strong>Experimental Web Platform features</strong>, set it to <strong>Enabled</strong>, then restart the browser. (Safari often exposes audio tracks without this.)`;
+  }
+  g("setupSkipBtn") && (g("setupSkipBtn").textContent = t("setupSkip"));
+
+  g("btnWatchLabel") && (g("btnWatchLabel").textContent = t("modalPlay"));
+  g("btnTrailerLabel") && (g("btnTrailerLabel").textContent = t("modalTrailer"));
+  const wl = g("btnTraktWatchlist");
+  if (wl) { wl.title = t("traktWlTitle"); const s = wl.querySelector(".btn-trakt-text"); if (s) s.textContent = t("modalWatchlist"); }
+  const wd = g("btnTraktWatched");
+  if (wd) { wd.title = t("traktWatchedTitle"); const s = wd.querySelector(".btn-trakt-text"); if (s) s.textContent = t("modalWatched"); }
+
+  const cst = g("modalCastTitle");
+  if (cst) cst.textContent = t("modalCast");
+
+  const ah = q("#audioDropdown .sub-dropdown-header");
+  if (ah) ah.textContent = t("playerAudio");
+  const sh = q("#subDropdown .sub-dropdown-header");
+  if (sh) sh.textContent = t("playerSubs");
+
+  g("settingsPanelTitle") && (g("settingsPanelTitle").textContent = t("settingsTitle"));
+  g("settingsTraktLabel") && (g("settingsTraktLabel").textContent = t("settingsTraktLabel"));
+  g("traktConnectBtn") && (g("traktConnectBtn").textContent = t("settingsLoginTrakt"));
+  g("traktDisconnectBtn") && (g("traktDisconnectBtn").textContent = t("settingsDisconnect"));
+  g("settingsClearBtn") && (g("settingsClearBtn").textContent = t("settingsClear"));
+  g("settingsCancelBtn") && (g("settingsCancelBtn").textContent = t("settingsCancel"));
+  g("settingsSaveBtn") && (g("settingsSaveBtn").textContent = t("settingsSave"));
+
+  g("btnPlayPause") && (g("btnPlayPause").title = t("playPause"));
+  g("btnSkipBack") && (g("btnSkipBack").title = t("skipBack"));
+  g("btnSkipForward") && (g("btnSkipForward").title = t("skipFwd"));
+  g("btnSpeed") && (g("btnSpeed").title = t("speedTitle"));
+  g("btnAudio") && (g("btnAudio").title = t("audioBtn"));
+  g("btnCC") && (g("btnCC").title = t("subsBtn"));
+  g("btnPip") && (g("btnPip").title = t("pipTitle"));
+  g("btnFullscreen") && (g("btnFullscreen").title = t("fsTitle"));
+
+  const po = document.getElementById("playerOverlay");
+  if (po && !po.classList.contains("open")) {
+    const al = g("audioList");
+    const sl = g("subList");
+    if (al && al.querySelector(".sub-loading")) al.innerHTML = `<div class="sub-loading">${t("playerLoadingAudio")}</div>`;
+    if (sl && sl.querySelector(".sub-loading")) sl.innerHTML = `<div class="sub-loading">${t("playerLoadingSubs")}</div>`;
+  }
+}
+
+function syncLangToggleButton() {
+  const btn = document.getElementById("langToggle");
+  if (!btn) return;
+  const es = getUiLang() === "es";
+  btn.textContent = es ? "ESP" : "ENG";
+  btn.classList.toggle("active", es);
+  btn.title = es ? "Idioma: Español (clic para inglés)" : "Language: English (click for Spanish)";
+}
+
+function applyUiLangFromStorage() {
+  document.documentElement.lang = getUiLang() === "es" ? "es" : "en";
+  syncLangToggleButton();
+  const si = document.getElementById("searchInput");
+  if (si) si.placeholder = getSearchPlaceholder();
+  applyStaticUiStrings();
+}
+
+function setUiLang(lang) {
+  localStorage.setItem(UI_LANG_KEY, lang === "es" ? "es" : "en");
+  applyUiLangFromStorage();
+}
+
+function genreName(id) {
+  return (getUiLang() === "es" ? GENRE_MAP_ES : GENRE_MAP)[id] || GENRE_MAP[id] || "";
+}
+
+function mediaTypeLabel(mediaType) {
+  if (mediaType === "tv") return getUiLang() === "es" ? "Serie" : "TV Show";
+  if (mediaType === "movie") return getUiLang() === "es" ? "Película" : "Movie";
+  return "";
+}
+
+const CATALOG_TITLE_ES = {
+  "Trending Movies": "Películas en tendencia",
+  "Now Playing": "En cartelera",
+  "Popular Movies": "Películas populares",
+  "Top Rated Movies": "Películas mejor valoradas",
+  "Upcoming": "Próximos estrenos",
+  "Trending TV": "Series en tendencia",
+  "Popular TV": "Series populares",
+  "Top Rated TV": "Series mejor valoradas",
+  "Continue Watching": "Continuar viendo",
+  "My Trakt Watchlist": "Mi lista de Trakt"
+};
+
+function localizedCatalogTitle(title) {
+  if (getUiLang() !== "es") return title;
+  return CATALOG_TITLE_ES[title] || title;
+}
+
+function shortMediaBadge(mediaType) {
+  if (mediaType === "tv") return getUiLang() === "es" ? "Serie" : "TV";
+  if (mediaType === "movie") return getUiLang() === "es" ? "Película" : "Film";
+  return "";
+}
+
 let apiKey = TMDB_KEY;
 let debridUrl = DEBRIDIO_ADDON_URL;
 let preferredQuality = localStorage.getItem("preferred_quality") || "1080p";
@@ -654,7 +956,6 @@ let traktAccessToken = localStorage.getItem("trakt_access_token") || "";
 let traktRefreshToken = localStorage.getItem("trakt_refresh_token") || "";
 let traktWatchedSet = new Set();
 let traktWatchlistSet = new Set();
-let aiMode = false;
 let searchTimeout = null;
 
 let playbackSaveTimer = null;
@@ -684,6 +985,7 @@ let eventsBound = false;
 // ── INIT ──
 function init() {
   if (!eventsBound) bindEvents();
+  applyUiLangFromStorage();
 
   if (!localStorage.getItem("fe_onboarding_done")) {
     document.getElementById("setupScreen").style.display = "flex";
@@ -731,11 +1033,18 @@ function bindEvents() {
     searchTimeout = setTimeout(() => runSearch(q), 400);
   });
 
-  document.getElementById("aiToggle").addEventListener("click", () => {
-    aiMode = !aiMode;
-    document.getElementById("aiToggle").classList.toggle("active", aiMode);
-    document.getElementById("searchInput").placeholder = aiMode
-      ? "Describe what you want to watch..." : "Search movies & TV shows...";
+  document.getElementById("langToggle").addEventListener("click", () => {
+    const next = getUiLang() === "es" ? "en" : "es";
+    setUiLang(next);
+    const main = document.getElementById("mainContent");
+    if (main && main.style.display !== "none") {
+      loadHero();
+      loadCatalogs();
+      if (traktAccessToken) loadTraktData();
+    }
+    const sr = document.getElementById("searchResults");
+    const q = document.getElementById("searchInput").value.trim();
+    if (sr && sr.style.display === "block" && q) runSearch(q);
   });
 
   // Settings
@@ -847,7 +1156,7 @@ function resetModalMedia() {
 async function tmdbFetch(endpoint, params = {}) {
   const url = new URL(TMDB_BASE + endpoint);
   url.searchParams.set("api_key", apiKey);
-  url.searchParams.set("language", "en-US");
+  url.searchParams.set("language", getTmdbLanguage());
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   const res = await fetch(url);
   if (!res.ok) throw new Error(`TMDB ${res.status}`);
@@ -873,9 +1182,9 @@ function renderHero() {
 
   const slides = heroItems.map((item, i) => {
     const year = item.releaseDate ? item.releaseDate.substring(0, 4) : "";
-    const genres = (item.genreIds || []).map(id => GENRE_MAP[id]).filter(Boolean).slice(0, 3).join(", ");
+    const genres = (item.genreIds || []).map(id => genreName(id)).filter(Boolean).slice(0, 3).join(", ");
     const rating = item.rating ? `★ ${item.rating.toFixed(1)}` : "";
-    const type = item.mediaType === "tv" ? "TV Show" : "Movie";
+    const type = mediaTypeLabel(item.mediaType);
     return `<div class="hero-slide${i === 0 ? " active" : ""}" data-hero-idx="${i}">
       <img class="hero-slide-bg" src="${TMDB_IMG}w1280${item.backdropPath}" alt="" loading="${i < 2 ? "eager" : "lazy"}">
       <div class="hero-gradient"></div>
@@ -891,7 +1200,7 @@ function renderHero() {
         <div class="hero-actions">
           <button class="hero-btn hero-btn-primary" data-hero-action="details" data-hero-idx="${i}">
             <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-            Details
+            ${t("heroDetails")}
           </button>
         </div>
       </div>
@@ -955,14 +1264,14 @@ async function loadCatalogs() {
   const container = document.getElementById("catalogRows");
   container.innerHTML = "";
   for (const cat of CATALOGS) {
-    const row = createRowSkeleton(cat.title);
+    const row = createRowSkeleton(localizedCatalogTitle(cat.title));
     container.appendChild(row);
     try {
       const data = await tmdbFetch(cat.endpoint);
       renderRowCards(row, (data.results || []).map(normalizeItem));
     } catch (err) {
       row.querySelector(".row-scroll,.row-loading").innerHTML =
-        `<div class="message" style="padding:20px"><h3>Failed to load</h3><p>${err.message}</p></div>`;
+        `<div class="message" style="padding:20px"><h3>${t("failedLoad")}</h3><p>${esc(err.message)}</p></div>`;
     }
   }
 }
@@ -975,6 +1284,48 @@ function createRowSkeleton(title) {
   return div;
 }
 
+const ROW_SCROLL_SVG_LEFT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
+const ROW_SCROLL_SVG_RIGHT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`;
+
+function buildRowScrollStrip(scrollEl) {
+  const parent = scrollEl.parentNode;
+  if (!parent) return null;
+  const wrap = document.createElement("div");
+  wrap.className = "row-scroll-wrap";
+  parent.replaceChild(wrap, scrollEl);
+  const prev = document.createElement("button");
+  prev.type = "button";
+  prev.className = "row-scroll-btn row-scroll-prev";
+  prev.setAttribute("aria-label", "Scroll left");
+  prev.innerHTML = ROW_SCROLL_SVG_LEFT;
+  const next = document.createElement("button");
+  next.type = "button";
+  next.className = "row-scroll-btn row-scroll-next";
+  next.setAttribute("aria-label", "Scroll right");
+  next.innerHTML = ROW_SCROLL_SVG_RIGHT;
+  wrap.appendChild(prev);
+  wrap.appendChild(scrollEl);
+  wrap.appendChild(next);
+  const step = () => Math.max(220, Math.floor(scrollEl.clientWidth * 0.82));
+  prev.addEventListener("click", () => scrollEl.scrollBy({ left: -step(), behavior: "smooth" }));
+  next.addEventListener("click", () => scrollEl.scrollBy({ left: step(), behavior: "smooth" }));
+  const sync = () => {
+    const max = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth - 1);
+    const atStart = scrollEl.scrollLeft <= 1;
+    const atEnd = scrollEl.scrollLeft >= max - 1;
+    prev.disabled = atStart;
+    next.disabled = atEnd;
+  };
+  scrollEl.addEventListener("scroll", sync, { passive: true });
+  window.addEventListener("resize", sync);
+  if (typeof ResizeObserver !== "undefined") {
+    const ro = new ResizeObserver(() => sync());
+    ro.observe(scrollEl);
+  }
+  requestAnimationFrame(() => sync());
+  return wrap;
+}
+
 function renderRowCards(rowEl, items) {
   const loading = rowEl.querySelector(".row-loading");
   if (loading) loading.remove();
@@ -982,6 +1333,7 @@ function renderRowCards(rowEl, items) {
   scroll.className = "row-scroll";
   items.forEach(item => scroll.appendChild(createCard(item)));
   rowEl.appendChild(scroll);
+  buildRowScrollStrip(scroll);
 }
 
 // ── CARD ──
@@ -999,7 +1351,7 @@ function createCard(item) {
       <div class="card-poster">
         <img class="card-img" src="${TMDB_IMG}w342${item.posterPath}" alt="${esc(item.title)}" loading="lazy">
         ${langLabel && lang !== "en" ? `<div class="card-lang ${langClass}">${langLabel}</div>` : ""}
-        ${item.mediaType ? `<div class="card-badge">${item.mediaType === "tv" ? "TV" : "Film"}</div>` : ""}
+        ${item.mediaType ? `<div class="card-badge">${shortMediaBadge(item.mediaType)}</div>` : ""}
       </div>
       <div class="card-info">
         <div class="card-title">${esc(item.title)}</div>
@@ -1036,13 +1388,14 @@ async function openModal(item) {
   const rc = item.rating >= 7 ? "rating-high" : item.rating >= 5 ? "rating-mid" : "rating-low";
   document.getElementById("modalMeta").innerHTML = [
     year, item.rating ? `<span class="rating ${rc}">★ ${item.rating.toFixed(1)}</span>` : "",
-    item.mediaType === "tv" ? "TV Show" : item.mediaType === "movie" ? "Movie" : ""
+    mediaTypeLabel(item.mediaType)
   ].filter(Boolean).join(" &nbsp;·&nbsp; ");
 
   document.getElementById("modalGenres").innerHTML = (item.genreIds || [])
-    .map(id => GENRE_MAP[id]).filter(Boolean)
+    .map(id => genreName(id)).filter(Boolean)
     .map(g => `<span class="genre-tag">${g}</span>`).join("");
-  document.getElementById("modalOverview").textContent = item.overview || "No description available.";
+  document.getElementById("modalOverview").textContent = item.overview ||
+    (getUiLang() === "es" ? "Sin descripción disponible." : "No description available.");
   document.getElementById("modalCast").innerHTML = "";
   document.getElementById("modalCastTitle").style.display = "none";
 
@@ -1153,7 +1506,7 @@ function renderSeasonPicker(resumeSeason, resumeEpisode) {
   const picker = document.getElementById("episodePicker");
   const sel = document.getElementById("seasonSelect");
   sel.innerHTML = currentSeasons.map(s =>
-    `<option value="${s.season_number}">Season ${s.season_number} (${s.episode_count} episodes)</option>`
+    `<option value="${s.season_number}">${seasonOptionLabel(s.season_number, s.episode_count)}</option>`
   ).join("");
   picker.classList.add("visible");
   sel.addEventListener("change", () => loadEpisodes(parseInt(sel.value)));
@@ -1168,7 +1521,7 @@ async function loadEpisodes(seasonNum, autoSelectEp) {
   currentSelectedEpisode = null;
   const grid = document.getElementById("episodeGrid");
   const epName = document.getElementById("epName");
-  grid.innerHTML = '<div class="source-loading">Loading episodes...</div>';
+  grid.innerHTML = `<div class="source-loading">${t("loadingEpisodes")}</div>`;
   epName.textContent = "";
 
   document.getElementById("sourcePanel").classList.remove("visible");
@@ -1178,7 +1531,7 @@ async function loadEpisodes(seasonNum, autoSelectEp) {
     const data = await tmdbFetch(`/tv/${currentItem.id}/season/${seasonNum}`);
     const eps = data.episodes || [];
     grid.innerHTML = eps.map(ep =>
-      `<button class="ep-btn" data-ep="${ep.episode_number}" data-name="${esc(ep.name || "")}" title="${esc(ep.name || "Episode " + ep.episode_number)}">
+      `<button class="ep-btn" data-ep="${ep.episode_number}" data-name="${esc(ep.name || "")}" title="${esc(ep.name || `${t("episode")} ${ep.episode_number}`)}">
         ${ep.episode_number}
       </button>`
     ).join("");
@@ -1188,7 +1541,9 @@ async function loadEpisodes(seasonNum, autoSelectEp) {
         grid.querySelectorAll(".ep-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         currentSelectedEpisode = parseInt(btn.dataset.ep);
-        epName.textContent = btn.dataset.name ? `E${currentSelectedEpisode}: ${btn.dataset.name}` : `Episode ${currentSelectedEpisode}`;
+        epName.textContent = btn.dataset.name
+          ? `${t("epPrefix")}${currentSelectedEpisode}: ${btn.dataset.name}`
+          : `${t("episode")} ${currentSelectedEpisode}`;
         document.getElementById("sourcePanel").classList.remove("visible");
         document.getElementById("sourcePanel").innerHTML = "";
       });
@@ -1198,22 +1553,22 @@ async function loadEpisodes(seasonNum, autoSelectEp) {
     const target = grid.querySelector(`.ep-btn[data-ep="${pickEp}"]`);
     if (target) target.click();
   } catch (err) {
-    grid.innerHTML = `<div class="source-loading">Failed to load episodes</div>`;
+    grid.innerHTML = `<div class="source-loading">${t("loadEpFail")}</div>`;
   }
 }
 
 // ── WATCH / SOURCES ──
 function onWatchClick() {
   if (!currentImdbId) {
-    alert("No IMDB ID found for this title.");
+    alert(t("alertNoImdb"));
     return;
   }
   if (!debridUrl) {
-    alert("Streaming is not configured.");
+    alert(t("alertNoDebrid"));
     return;
   }
   if (currentItem.mediaType === "tv" && !currentSelectedEpisode) {
-    alert("Select an episode first.");
+    alert(t("alertSelectEp"));
     return;
   }
   fetchStreams();
@@ -1222,7 +1577,7 @@ function onWatchClick() {
 async function fetchStreams() {
   const panel = document.getElementById("sourcePanel");
   panel.classList.add("visible");
-  panel.innerHTML = '<div class="source-loading">Fetching sources...</div>';
+  panel.innerHTML = `<div class="source-loading">${t("fetchSources")}</div>`;
 
   const base = debridUrl.replace(/\/manifest\.json\s*$/i, "").replace(/\/+$/, "");
   const type = currentItem.mediaType === "tv" ? "series" : "movie";
@@ -1238,14 +1593,14 @@ async function fetchStreams() {
     const streams = data.streams || [];
 
     if (!streams.length) {
-      panel.innerHTML = '<div class="no-sources">No sources found for this title.</div>';
+      panel.innerHTML = `<div class="no-sources">${t("noSourcesTitle")}</div>`;
       return;
     }
 
     const groups = groupByQuality(streams);
     renderSources(panel, groups);
   } catch (err) {
-    panel.innerHTML = `<div class="no-sources">Failed to load sources: ${esc(err.message)}</div>`;
+    panel.innerHTML = `<div class="no-sources">${t("loadSourcesFail")}: ${esc(err.message)}</div>`;
   }
 }
 
@@ -1263,6 +1618,7 @@ const FOREIGN_AUDIO_RE = /\b(italian|ita|french|fra|fre|german|deu|ger|portugues
 
 function audioScore(title) {
   const t = (title || "").toLowerCase();
+  const preferEs = getUiLang() === "es";
   const isDual = /dual.?audio|multi/i.test(t);
   const isEnglish = /english|eng\b|en\b/i.test(t);
   const isSpanish = /spanish|spa\b|español|latino/i.test(t);
@@ -1272,7 +1628,12 @@ function audioScore(title) {
     const isJpn = /japanese|jpn|ja\b/i.test(t);
     if (isJpn && !isDual) return 0;
     if (isDual) return 1;
-    if (isEnglish || isSpanish) return 2;
+    if (preferEs) {
+      if (isSpanish) return 2;
+      if (isEnglish) return 3;
+    } else {
+      if (isEnglish || isSpanish) return 2;
+    }
     if (hasForeign) return 10;
     return 3;
   }
@@ -1281,10 +1642,25 @@ function audioScore(title) {
     if (isDual) return 0;
     const origRe = new RegExp("\\b" + currentOriginalLang + "\\b", "i");
     if (origRe.test(t)) return 1;
-    if (isEnglish) return 2;
-    if (isSpanish) return 3;
+    if (preferEs) {
+      if (isSpanish) return 2;
+      if (isEnglish) return 3;
+    } else {
+      if (isEnglish) return 2;
+      if (isSpanish) return 3;
+    }
     if (hasForeign) return 10;
     return 4;
+  }
+
+  if (preferEs) {
+    if (isSpanish && !hasForeign) return 0;
+    if (isSpanish && isDual) return 0;
+    if (isDual) return 1;
+    if (isEnglish && !hasForeign) return 2;
+    if (isEnglish) return 2;
+    if (!hasForeign) return 3;
+    return 10;
   }
 
   if (isEnglish && !hasForeign) return 0;
@@ -1314,7 +1690,7 @@ function groupByQuality(streams) {
 
 function renderSources(panel, groups) {
   if (!groups.length) {
-    panel.innerHTML = '<div class="no-sources">No sources found.</div>';
+    panel.innerHTML = `<div class="no-sources">${t("noSources")}</div>`;
     return;
   }
 
@@ -1333,8 +1709,8 @@ function renderSources(panel, groups) {
       return `<div class="source-card" data-url="${esc(s.url)}" data-title="${esc(t)}">
         <div class="source-card-title">${esc(t)}</div>
         <div class="source-card-meta">
-          <span class="source-card-badge">RD</span>
-          <span class="source-card-play">▶ Play</span>
+          <span class="source-card-badge">${t("sourceBadge")}</span>
+          <span class="source-card-play">${t("sourcePlay")}</span>
         </div>
       </div>`;
     }).join("");
@@ -1465,8 +1841,8 @@ function openPlayer(url, title) {
   document.getElementById("btnCC").classList.remove("active");
   document.getElementById("subDropdown").classList.remove("open");
   document.getElementById("audioDropdown").classList.remove("open");
-  document.getElementById("subList").innerHTML = '<div class="sub-loading">Loading subtitles...</div>';
-  document.getElementById("audioList").innerHTML = '<div class="sub-loading">Detecting audio tracks...</div>';
+  document.getElementById("subList").innerHTML = `<div class="sub-loading">${t("playerLoadingSubs")}</div>`;
+  document.getElementById("audioList").innerHTML = `<div class="sub-loading">${t("playerLoadingAudio")}</div>`;
 
   if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
 
@@ -1665,6 +2041,18 @@ const LANG_NAMES = {
   srp:"Serbian",sr:"Serbian",fil:"Filipino",tl:"Filipino",ben:"Bengali",bn:"Bengali"
 };
 
+function normalizeSubLangCode(s) {
+  return (s.lang || s.SubLanguageID || "").toLowerCase();
+}
+
+function isSpanishSubCode(lang) {
+  return lang === "spa" || lang === "es" || lang === "spl";
+}
+
+function isEnglishSubCode(lang) {
+  return lang === "eng" || lang === "en";
+}
+
 async function fetchSubtitles(type, streamId) {
   const subList = document.getElementById("subList");
   try {
@@ -1673,24 +2061,40 @@ async function fetchSubtitles(type, streamId) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const allSubs = data.subtitles || [];
+    const preferEs = getUiLang() === "es";
     currentSubtitles = allSubs.filter(s => {
-      const lang = (s.lang || s.SubLanguageID || "").toLowerCase();
-      return lang === "eng" || lang === "en" || lang === "spa" || lang === "es";
+      const lang = normalizeSubLangCode(s);
+      return isEnglishSubCode(lang) || isSpanishSubCode(lang);
+    });
+    currentSubtitles.sort((a, b) => {
+      const la = normalizeSubLangCode(a);
+      const lb = normalizeSubLangCode(b);
+      const rank = lang => {
+        if (preferEs) {
+          if (isSpanishSubCode(lang)) return 0;
+          if (isEnglishSubCode(lang)) return 1;
+        } else {
+          if (isEnglishSubCode(lang)) return 0;
+          if (isSpanishSubCode(lang)) return 1;
+        }
+        return 2;
+      };
+      return rank(la) - rank(lb);
     });
     if (!currentSubtitles.length) {
-      subList.innerHTML = '<div class="sub-loading">No English/Spanish subtitles found</div>';
+      subList.innerHTML = `<div class="sub-loading">${t("noSubsFound")}</div>`;
       return;
     }
     renderSubList();
     loadSubtitleTrack(currentSubtitles[0]);
   } catch (err) {
-    subList.innerHTML = `<div class="sub-loading">Could not load subtitles</div>`;
+    subList.innerHTML = `<div class="sub-loading">${t("subLoadError")}</div>`;
   }
 }
 
 function renderSubList() {
   const subList = document.getElementById("subList");
-  const offItem = `<div class="sub-dropdown-item${!activeSubTrackUrl ? " active" : ""}" data-sub-off="true">Off</div>`;
+  const offItem = `<div class="sub-dropdown-item${!activeSubTrackUrl ? " active" : ""}" data-sub-off="true">${t("subsOff")}</div>`;
   const items = currentSubtitles.map((s, i) => {
     const langCode = s.lang || s.SubLanguageID || "";
     const langName = LANG_NAMES[langCode] || langCode.toUpperCase();
@@ -1794,7 +2198,7 @@ function probeAudioTracks() {
   const list = document.getElementById("audioList");
   const tracks = getAudioTracks();
   if (!tracks.length) {
-    list.innerHTML = '<div class="sub-loading">No audio tracks detected</div>';
+    list.innerHTML = `<div class="sub-loading">${t("noAudioTracks")}</div>`;
     return;
   }
   renderAudioList(tracks);
@@ -1867,17 +2271,37 @@ function autoSelectAudioTrack() {
   const tracks = getAudioTracks();
   if (tracks.length < 2) return;
 
+  const preferEs = getUiLang() === "es";
+  const esRe = t => /^es/i.test(t.lang || "") || /spanish|spa|español|latino/i.test(t.label || "");
+  const enRe = t => /^en/i.test(t.lang || "") || /english|eng\b/i.test(t.label || "");
+
   let preferred = -1;
   if (currentIsAnime) {
     preferred = tracks.findIndex(t => /^ja/i.test(t.lang) || /japanese|jpn/i.test(t.label));
     if (preferred === -1) preferred = tracks.findIndex(t => /dual|multi/i.test(t.label));
-    if (preferred === -1) preferred = tracks.findIndex(t => /^en/i.test(t.lang) || /english|eng/i.test(t.label));
+    if (preferEs) {
+      if (preferred === -1) preferred = tracks.findIndex(esRe);
+      if (preferred === -1) preferred = tracks.findIndex(enRe);
+    } else {
+      if (preferred === -1) preferred = tracks.findIndex(enRe);
+      if (preferred === -1) preferred = tracks.findIndex(esRe);
+    }
   } else if (currentOriginalLang && currentOriginalLang !== "en") {
     preferred = tracks.findIndex(t => t.lang.startsWith(currentOriginalLang));
     if (preferred === -1) preferred = tracks.findIndex(t => /dual|multi/i.test(t.label));
-    if (preferred === -1) preferred = tracks.findIndex(t => /^en/i.test(t.lang) || /english|eng/i.test(t.label));
+    if (preferEs) {
+      if (preferred === -1) preferred = tracks.findIndex(esRe);
+      if (preferred === -1) preferred = tracks.findIndex(enRe);
+    } else {
+      if (preferred === -1) preferred = tracks.findIndex(enRe);
+      if (preferred === -1) preferred = tracks.findIndex(esRe);
+    }
+  } else if (preferEs) {
+    preferred = tracks.findIndex(esRe);
+    if (preferred === -1) preferred = tracks.findIndex(enRe);
   } else {
-    preferred = tracks.findIndex(t => /^en/i.test(t.lang) || /english|eng/i.test(t.label));
+    preferred = tracks.findIndex(enRe);
+    if (preferred === -1) preferred = tracks.findIndex(esRe);
   }
 
   if (preferred !== -1 && !tracks[preferred].active) {
@@ -1888,7 +2312,7 @@ function autoSelectAudioTrack() {
 // ── SEARCH ──
 function searchResultsTopBar(titleHtml) {
   return `<div class="search-results-top">
-    <button type="button" class="btn-search-back">← Home</button>
+    <button type="button" class="btn-search-back">${t("searchBack")}</button>
     <div class="search-results-title">${titleHtml}</div>
   </div>`;
 }
@@ -1898,29 +2322,24 @@ async function runSearch(query) {
   document.getElementById("heroCarousel").style.display = "none";
   document.getElementById("catalogRows").style.display = "none";
   container.style.display = "block";
-  container.innerHTML = `${searchResultsTopBar("Searching…")}
+  container.innerHTML = `${searchResultsTopBar(t("searching"))}
     <div class="search-grid">${Array(6).fill('<div class="skeleton" style="width:100%"></div>').join("")}</div>`;
 
   try {
-    let items;
-    if (aiMode) {
-      items = await forwardAISearch(query);
-    } else {
-      const data = await tmdbFetch("/search/multi", { query });
-      items = (data.results || []).filter(r => r.media_type === "movie" || r.media_type === "tv").map(normalizeItem);
-    }
+    const data = await tmdbFetch("/search/multi", { query });
+    const items = (data.results || []).filter(r => r.media_type === "movie" || r.media_type === "tv").map(normalizeItem);
     if (!items.length) {
       container.innerHTML = `${searchResultsTopBar("")}
-        <div class="message"><h3>No results</h3><p>Try a different search term.</p></div>`;
+        <div class="message"><h3>${t("noResults")}</h3><p>${t("tryDifferent")}</p></div>`;
       return;
     }
-    container.innerHTML = `${searchResultsTopBar(`${aiMode ? "AI" : "Search"} results for "${esc(query)}"`)}
+    container.innerHTML = `${searchResultsTopBar(`${t("searchResultsHeading")} — "${esc(query)}"`)}
       <div class="search-grid"></div>`;
     const grid = container.querySelector(".search-grid");
     items.forEach(item => grid.appendChild(createCard(item)));
   } catch (err) {
     container.innerHTML = `${searchResultsTopBar("")}
-      <div class="message"><h3>Search failed</h3><p>${esc(err.message)}</p></div>`;
+      <div class="message"><h3>${t("searchFailed")}</h3><p>${esc(err.message)}</p></div>`;
   }
 }
 
@@ -1950,27 +2369,6 @@ function goHome() {
   if (si) si.value = "";
   hideSearch();
   window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-async function forwardAISearch(query) {
-  const res = await fetch(FORWARD_AI_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, userId: "", language: "en-US" })
-  });
-  const data = await res.json();
-  if (!data || !data.success) throw new Error(data?.message || "AI Search failed");
-  return (data.data || []).map(item => ({
-    id: item.id,
-    title: item.title || item.name || "",
-    overview: item.description || item.overview || "",
-    posterPath: item.posterPath || item.poster_path || "",
-    backdropPath: item.backdropPath || item.backdrop_path || "",
-    releaseDate: item.releaseDate || item.release_date || item.first_air_date || "",
-    rating: item.rating || item.vote_average || 0,
-    mediaType: item.mediaType || item.media_type || "movie",
-    genreIds: item.genre_ids || [],
-  }));
 }
 
 // ── HELPERS ──
@@ -2213,7 +2611,8 @@ async function loadContinueWatchingRow(grid, watchedShows, playback) {
   items.sort((a, b) => b.sortDate - a.sortDate);
   if (!items.length) return;
 
-  const row = createRowSkeleton("Continue Watching");
+  const row = createRowSkeleton(localizedCatalogTitle("Continue Watching"));
+  row.classList.add("row--continue");
   grid.insertBefore(row, grid.firstChild);
 
   const cards = [];
@@ -2236,7 +2635,7 @@ async function loadContinueWatchingRow(grid, watchedShows, playback) {
       const card = document.createElement("div");
       card.className = "cw-card";
       card.innerHTML = `
-        <div style="position:relative">
+        <div class="cw-thumb-wrap">
           <img class="cw-thumb" src="${thumbUrl}" alt="${esc(title)}" loading="lazy">
           <div class="cw-play-icon"><svg viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21"/></svg></div>
         </div>
@@ -2244,7 +2643,7 @@ async function loadContinueWatchingRow(grid, watchedShows, playback) {
           <div class="cw-title">${esc(title)}</div>
           <div class="cw-sub">
             ${item.epLabel ? `<span class="cw-ep">${item.epLabel}</span>` : ""}
-            <span>${mtype === "tv" ? "TV" : "Film"}</span>
+            <span>${shortMediaBadge(mtype)}</span>
           </div>
         </div>
         <div class="cw-progress"><div class="cw-progress-bar" style="width:${item.pct}%"></div></div>`;
@@ -2271,12 +2670,13 @@ async function loadContinueWatchingRow(grid, watchedShows, playback) {
   cards.forEach(c => scrollArea.appendChild(c));
   row.querySelector(".row-loading")?.remove();
   row.appendChild(scrollArea);
+  buildRowScrollStrip(scrollArea);
 }
 
 async function loadTraktWatchlistRow(grid, watchlistItems) {
   if (!watchlistItems.length) return;
 
-  const row = createRowSkeleton("My Trakt Watchlist");
+  const row = createRowSkeleton(localizedCatalogTitle("My Trakt Watchlist"));
   grid.insertBefore(row, grid.children[1] || null);
 
   const cards = [];
@@ -2306,6 +2706,7 @@ async function loadTraktWatchlistRow(grid, watchlistItems) {
   cards.forEach(c => scrollArea.appendChild(c));
   row.querySelector(".row-loading")?.remove();
   row.appendChild(scrollArea);
+  buildRowScrollStrip(scrollArea);
 }
 
 function updateTraktButtons() {
