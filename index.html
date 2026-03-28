@@ -1705,9 +1705,9 @@ function renderSources(panel, groups) {
 
   function buildSourceCards(streams) {
     return streams.map(s => {
-      const t = (s.title || s.name || "").replace(/\n/g, " ").trim();
-      return `<div class="source-card" data-url="${esc(s.url)}" data-title="${esc(t)}">
-        <div class="source-card-title">${esc(t)}</div>
+      const streamTitle = (s.title || s.name || "").replace(/\n/g, " ").trim();
+      return `<div class="source-card" data-url="${esc(s.url)}" data-title="${esc(streamTitle)}">
+        <div class="source-card-title">${esc(streamTitle)}</div>
         <div class="source-card-meta">
           <span class="source-card-badge">${t("sourceBadge")}</span>
           <span class="source-card-play">${t("sourcePlay")}</span>
