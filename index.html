@@ -547,7 +547,8 @@ let aiMode = false;
 let searchTimeout = null;
 
 let playbackSaveTimer = null;
-let scrobbledCurrent = false;
+let traktScrobbleTimer = null;
+let traktHistorySynced = false;
 let currentItem = null;
 let currentImdbId = null;
 let currentTrailerKey = null;
@@ -1255,29 +1256,66 @@ function savePlaybackPos() {
   }
 }
 
-function tryScrobbleTrakt() {
-  if (scrobbledCurrent || !traktAccessToken || !currentImdbId) return;
+function getTraktProgressPct() {
   const v = document.getElementById("playerVideo");
-  if (!v || !v.duration || v.duration === Infinity) return;
-  const pct = v.currentTime / v.duration;
-  if (pct < 0.80) return;
+  if (!v || !v.duration || !isFinite(v.duration) || v.duration <= 0) return null;
+  return Math.min(100, Math.round((v.currentTime / v.duration) * 1000) / 10);
+}
 
-  scrobbledCurrent = true;
+function buildTraktScrobbleBody(progress) {
+  if (currentItem?.mediaType === "tv" && currentSelectedSeason != null && currentSelectedEpisode != null) {
+    return {
+      show: { ids: { imdb: currentImdbId } },
+      episode: { season: currentSelectedSeason, number: currentSelectedEpisode },
+      progress
+    };
+  }
+  return { movie: { ids: { imdb: currentImdbId } }, progress };
+}
+
+function traktScrobbleStart(progress) {
+  if (!traktAccessToken || !currentImdbId || progress == null) return;
+  traktFetch("/scrobble/start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(buildTraktScrobbleBody(progress))
+  }).catch(() => {});
+}
+
+function traktScrobbleStop(progress) {
+  if (!traktAccessToken || !currentImdbId || progress == null) return;
+  traktFetch("/scrobble/stop", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(buildTraktScrobbleBody(progress))
+  }).catch(() => {});
+}
+
+function traktSyncHistoryIfFinished(progress) {
+  if (traktHistorySynced || !traktAccessToken || !currentImdbId || progress < 98) return;
+  traktHistorySynced = true;
   let body;
   if (currentItem?.mediaType === "tv" && currentSelectedSeason && currentSelectedEpisode) {
     body = { shows: [{ ids: { imdb: currentImdbId }, seasons: [{ number: currentSelectedSeason, episodes: [{ number: currentSelectedEpisode }] }] }] };
   } else {
     body = { movies: [{ ids: { imdb: currentImdbId } }] };
   }
-
   traktFetch("/sync/history", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   }).catch(() => {});
-
   traktWatchedSet.add(currentImdbId);
   localStorage.removeItem(getPlaybackKey());
+}
+
+function tickTraktScrobble() {
+  const v = document.getElementById("playerVideo");
+  if (!v || v.paused || !traktAccessToken || !currentImdbId) return;
+  const p = getTraktProgressPct();
+  if (p == null) return;
+  traktScrobbleStart(p);
+  traktSyncHistoryIfFinished(p);
 }
 
 function openPlayer(url, title) {
@@ -1318,7 +1356,7 @@ function openPlayer(url, title) {
   video.playbackRate = 1;
   document.getElementById("btnSpeed").textContent = "1x";
 
-  scrobbledCurrent = false;
+  traktHistorySynced = false;
   overlay.classList.add("open");
   video.play().catch(() => {});
   showPlayerControls();
@@ -1337,13 +1375,19 @@ function openPlayer(url, title) {
   video.addEventListener("canplay", () => {
     probeAudioTracks();
     autoSelectAudioTrack();
+    const p0 = getTraktProgressPct();
+    if (p0 != null) traktScrobbleStart(p0);
+  }, { once: true });
+
+  video.addEventListener("playing", () => {
+    const p = getTraktProgressPct();
+    if (p != null) traktScrobbleStart(p);
   }, { once: true });
 
   clearInterval(playbackSaveTimer);
-  playbackSaveTimer = setInterval(() => {
-    savePlaybackPos();
-    tryScrobbleTrakt();
-  }, 5000);
+  clearInterval(traktScrobbleTimer);
+  playbackSaveTimer = setInterval(() => savePlaybackPos(), 5000);
+  traktScrobbleTimer = setInterval(() => tickTraktScrobble(), 30000);
 
   if (video.audioTracks) {
     video.audioTracks.addEventListener("addtrack", onAudioTrackAdd);
@@ -1364,8 +1408,13 @@ function closePlayer() {
   const overlay = document.getElementById("playerOverlay");
   const video = document.getElementById("playerVideo");
   savePlaybackPos();
-  tryScrobbleTrakt();
+  const pEnd = getTraktProgressPct();
+  if (pEnd != null) {
+    traktScrobbleStop(pEnd);
+    traktSyncHistoryIfFinished(pEnd);
+  }
   clearInterval(playbackSaveTimer);
+  clearInterval(traktScrobbleTimer);
   overlay.classList.remove("open");
   video.pause();
   if (video.audioTracks) {
