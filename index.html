@@ -369,9 +369,8 @@ input,select{font-family:inherit}
 <!-- SETUP (first visit) -->
 <div class="setup" id="setupScreen" style="display:none">
   <h1>NFB</h1>
-  <p>Welcome. Paste your <strong style="color:var(--text)">Debridio addon URL</strong> so Play can resolve streams (from <a href="https://debridio.com" target="_blank" style="color:var(--accent-glow)">debridio.com</a>). You can add or change it later in Settings.</p>
-  <div class="setup-input">
-    <input type="text" id="setupDebridInput" placeholder="https://addon.debridio.com/eyJ..." autocomplete="off">
+  <p>Welcome. Connect <strong style="color:var(--text)">Trakt</strong> in Settings to sync your watchlist. Streaming is ready to go.</p>
+  <div class="setup-input" style="justify-content:center">
     <button class="btn-primary" id="setupSaveBtn">Get Started</button>
   </div>
   <div class="setup-callout">
@@ -511,10 +510,6 @@ input,select{font-family:inherit}
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-panel">
     <h2>Settings</h2>
-    <label for="settingsDebridInput">Debridio Addon URL</label>
-    <input type="text" id="settingsDebridInput" placeholder="https://addon.debridio.com/eyJ...">
-    <div class="settings-hint">Configure at <a href="https://debridio.com" target="_blank" style="color:var(--accent-glow)">debridio.com</a>, paste the addon URL. Stored in this browser only.</div>
-    <div class="settings-divider" style="height:1px;background:rgba(255,255,255,.06);margin:8px 0 20px"></div>
     <label>Trakt</label>
     <div id="traktAuthSection">
       <button class="btn-trakt" id="traktConnectBtn">Login to Trakt</button>
@@ -536,6 +531,7 @@ const TMDB_KEY = "330ce6497554819b8c235f021cf221ed";
 const FORWARD_AI_URL = "https://fluxapi.vvebo.vip/v1/nlsearch/search";
 const TRAKT_CID = "65e1fbb8f37a3f62b7f43d54bfeb64acec0511803a1f8f46381484ab943649c7";
 const TRAKT_SEC = "71f323143e6110c6615e6d8dcb1ea1c65d1265464a7f63c25465199d1d7d19ab";
+const DEBRIDIO_ADDON_URL = "https://addon.debridio.com/eyJhcGlfa2V5IjoiYmJiMmUzNDJlZjU2NDczMGQxOTY1NDhjOGJlOTFlMTAiLCJwcm92aWRlciI6InJlYWxkZWJyaWQiLCJwcm92aWRlcktleSI6IjQ1UEFBRkoyNDM2RjdVTURYRVA0SldKT0JKMklQRFBORVFZUjJRT1RMUlFNNzZWS0xXTlEiLCJkaXNhYmxlVW5jYWNoZWQiOnRydWUsIm1heFNpemUiOiIiLCJtYXhSZXR1cm5QZXJRdWFsaXR5Ijo2LCJyZXNvbHV0aW9ucyI6WyI0ayIsIjEwODBwIiwiNzIwcCIsIjQ4MHAiLCIzNjBwIiwidW5rbm93biJdLCJleGNsdWRlZFF1YWxpdGllcyI6WyJUZWxlQ2luZSIsIlRlbGVTeW5jIiwiU0NSIiwiQ0FNIl19/manifest.json";
 
 const GENRE_MAP = {28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",14:"Fantasy",36:"History",27:"Horror",10402:"Music",9648:"Mystery",10749:"Romance",878:"Science Fiction",10770:"TV Movie",53:"Thriller",10752:"War",37:"Western",10759:"Action & Adventure",10762:"Kids",10763:"News",10764:"Reality",10766:"Soap",10767:"Talk",10768:"War & Politics"};
 
@@ -551,7 +547,7 @@ const CATALOGS = [
 ];
 
 let apiKey = TMDB_KEY;
-let debridUrl = localStorage.getItem("debridio_url") || "";
+let debridUrl = DEBRIDIO_ADDON_URL;
 let preferredQuality = localStorage.getItem("preferred_quality") || "1080p";
 let traktAccessToken = localStorage.getItem("trakt_access_token") || "";
 let traktRefreshToken = localStorage.getItem("trakt_refresh_token") || "";
@@ -591,8 +587,6 @@ function init() {
   if (!localStorage.getItem("fe_onboarding_done")) {
     document.getElementById("setupScreen").style.display = "flex";
     document.getElementById("mainContent").style.display = "none";
-    const sd = document.getElementById("setupDebridInput");
-    if (sd) sd.value = debridUrl || "";
     return;
   }
 
@@ -603,11 +597,6 @@ function init() {
 }
 
 function finishOnboarding() {
-  const url = document.getElementById("setupDebridInput")?.value.trim() || "";
-  if (url) {
-    debridUrl = url;
-    localStorage.setItem("debridio_url", url);
-  }
   localStorage.setItem("fe_onboarding_done", "1");
   document.getElementById("setupScreen").style.display = "none";
   document.getElementById("mainContent").style.display = "block";
@@ -650,23 +639,17 @@ function bindEvents() {
 
   // Settings
   document.getElementById("settingsBtn").addEventListener("click", () => {
-    document.getElementById("settingsDebridInput").value = debridUrl;
     updateTraktSettingsUI();
     document.getElementById("settingsOverlay").classList.add("open");
   });
   document.getElementById("settingsCancelBtn").addEventListener("click", closeSettings);
-  document.getElementById("settingsSaveBtn").addEventListener("click", () => {
-    const dUrl = document.getElementById("settingsDebridInput").value.trim();
-    debridUrl = dUrl; localStorage.setItem("debridio_url", dUrl);
-    closeSettings();
-  });
+  document.getElementById("settingsSaveBtn").addEventListener("click", closeSettings);
   document.getElementById("settingsClearBtn").addEventListener("click", () => {
-    localStorage.removeItem("debridio_url");
     localStorage.removeItem("trakt_access_token");
     localStorage.removeItem("trakt_refresh_token");
-    debridUrl = "";
     traktAccessToken = ""; traktRefreshToken = "";
     traktWatchedSet.clear(); traktWatchlistSet.clear();
+    debridUrl = DEBRIDIO_ADDON_URL;
     closeSettings();
     location.reload();
   });
@@ -1125,7 +1108,7 @@ function onWatchClick() {
     return;
   }
   if (!debridUrl) {
-    alert("No Debridio addon URL configured. Add it in Settings.");
+    alert("Streaming is not configured.");
     return;
   }
   if (currentItem.mediaType === "tv" && !currentSelectedEpisode) {
