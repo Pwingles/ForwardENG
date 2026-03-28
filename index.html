@@ -400,7 +400,7 @@ input,select{font-family:inherit}
       <div class="modal-actions" id="modalActions" style="display:none">
         <button class="btn-watch" id="btnWatch">
           <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Watch
+          Play
         </button>
         <button class="btn-trailer" id="btnTrailer" style="display:none">
           ▶ Trailer
@@ -526,6 +526,7 @@ const CATALOGS = [
 
 let apiKey = TMDB_KEY;
 let debridUrl = localStorage.getItem("debridio_url") || "";
+let preferredQuality = localStorage.getItem("preferred_quality") || "1080p";
 let traktAccessToken = localStorage.getItem("trakt_access_token") || "";
 let traktRefreshToken = localStorage.getItem("trakt_refresh_token") || "";
 let traktWatchedSet = new Set();
@@ -960,7 +961,9 @@ async function openModal(item) {
     if (type === "tv" && detail.seasons) {
       currentSeasons = detail.seasons.filter(s => s.season_number > 0);
       if (currentSeasons.length) {
-        renderSeasonPicker();
+        const resumeS = item.resumeSeason || null;
+        const resumeE = item.resumeEpisode || null;
+        renderSeasonPicker(resumeS, resumeE);
       }
     }
   } catch (_) {}
@@ -983,7 +986,7 @@ function showTrailer() {
 }
 
 // ── EPISODE PICKER ──
-function renderSeasonPicker() {
+function renderSeasonPicker(resumeSeason, resumeEpisode) {
   const picker = document.getElementById("episodePicker");
   const sel = document.getElementById("seasonSelect");
   sel.innerHTML = currentSeasons.map(s =>
@@ -991,10 +994,13 @@ function renderSeasonPicker() {
   ).join("");
   picker.classList.add("visible");
   sel.addEventListener("change", () => loadEpisodes(parseInt(sel.value)));
-  loadEpisodes(currentSeasons[0].season_number);
+  const startSeason = resumeSeason && currentSeasons.some(s => s.season_number === resumeSeason)
+    ? resumeSeason : currentSeasons[0].season_number;
+  sel.value = startSeason;
+  loadEpisodes(startSeason, resumeEpisode || (startSeason === currentSeasons[0].season_number ? 1 : null));
 }
 
-async function loadEpisodes(seasonNum) {
+async function loadEpisodes(seasonNum, autoSelectEp) {
   currentSelectedSeason = seasonNum;
   currentSelectedEpisode = null;
   const grid = document.getElementById("episodeGrid");
@@ -1002,7 +1008,6 @@ async function loadEpisodes(seasonNum) {
   grid.innerHTML = '<div class="source-loading">Loading episodes...</div>';
   epName.textContent = "";
 
-  // hide sources when switching season
   document.getElementById("sourcePanel").classList.remove("visible");
   document.getElementById("sourcePanel").innerHTML = "";
 
@@ -1021,18 +1026,21 @@ async function loadEpisodes(seasonNum) {
         btn.classList.add("active");
         currentSelectedEpisode = parseInt(btn.dataset.ep);
         epName.textContent = btn.dataset.name ? `E${currentSelectedEpisode}: ${btn.dataset.name}` : `Episode ${currentSelectedEpisode}`;
-        // hide old sources
         document.getElementById("sourcePanel").classList.remove("visible");
         document.getElementById("sourcePanel").innerHTML = "";
       });
     });
+
+    const pickEp = autoSelectEp || 1;
+    const target = grid.querySelector(`.ep-btn[data-ep="${pickEp}"]`);
+    if (target) target.click();
   } catch (err) {
     grid.innerHTML = `<div class="source-loading">Failed to load episodes</div>`;
   }
 }
 
 // ── WATCH / SOURCES ──
-function onWatchClick() {
+function onWatchClick(autoPlay) {
   if (!currentImdbId) {
     alert("No IMDB ID found for this title.");
     return;
@@ -1045,10 +1053,10 @@ function onWatchClick() {
     alert("Select an episode first.");
     return;
   }
-  fetchStreams();
+  fetchStreams(autoPlay !== false);
 }
 
-async function fetchStreams() {
+async function fetchStreams(autoPlay) {
   const panel = document.getElementById("sourcePanel");
   panel.classList.add("visible");
   panel.innerHTML = '<div class="source-loading">Fetching sources...</div>';
@@ -1073,6 +1081,20 @@ async function fetchStreams() {
 
     const groups = groupByQuality(streams);
     renderSources(panel, groups);
+
+    if (autoPlay) {
+      const prefIdx = groups.findIndex(g => g.quality === preferredQuality);
+      const targetGroup = groups[prefIdx !== -1 ? prefIdx : 0];
+      if (targetGroup && targetGroup.streams.length) {
+        if (prefIdx !== -1 && prefIdx !== 0) {
+          const tab = panel.querySelector(`.quality-tab[data-qtab="${prefIdx}"]`);
+          if (tab) tab.click();
+        }
+        const firstUrl = targetGroup.streams[0].url;
+        const firstTitle = (targetGroup.streams[0].title || targetGroup.streams[0].name || "").replace(/\n/g, " ").trim();
+        openPlayer(firstUrl, firstTitle);
+      }
+    }
   } catch (err) {
     panel.innerHTML = `<div class="no-sources">Failed to load sources: ${esc(err.message)}</div>`;
   }
@@ -1147,10 +1169,13 @@ function renderSources(panel, groups) {
     return;
   }
 
+  const prefIdx = groups.findIndex(g => g.quality === preferredQuality);
+  const activeIdx = prefIdx !== -1 ? prefIdx : 0;
+
   const tabs = groups.map((g, gi) => {
     const badgeClass = g.quality === "4K" ? "q-4k" : g.quality === "1080p" ? "q-1080p" :
       g.quality === "720p" ? "q-720p" : g.quality === "480p" ? "q-480p" : "q-other";
-    return `<button class="quality-tab ${badgeClass}${gi === 0 ? " active" : ""}" data-qtab="${gi}">${g.quality} <span style="opacity:.6;font-weight:400">(${g.streams.length})</span></button>`;
+    return `<button class="quality-tab ${badgeClass}${gi === activeIdx ? " active" : ""}" data-qtab="${gi}" data-quality="${g.quality}">${g.quality} <span style="opacity:.6;font-weight:400">(${g.streams.length})</span></button>`;
   }).join("");
 
   function buildSourceCards(streams) {
@@ -1166,7 +1191,7 @@ function renderSources(panel, groups) {
     }).join("");
   }
 
-  panel.innerHTML = `<div class="quality-tabs">${tabs}</div><div class="source-list" id="sourceList">${buildSourceCards(groups[0].streams)}</div>`;
+  panel.innerHTML = `<div class="quality-tabs">${tabs}</div><div class="source-list" id="sourceList">${buildSourceCards(groups[activeIdx].streams)}</div>`;
 
   function bindSourceCards() {
     panel.querySelectorAll(".source-card").forEach(card => {
@@ -1182,6 +1207,8 @@ function renderSources(panel, groups) {
       panel.querySelectorAll(".quality-tab").forEach(t => t.classList.remove("active"));
       tab.classList.add("active");
       const idx = parseInt(tab.dataset.qtab);
+      preferredQuality = tab.dataset.quality;
+      localStorage.setItem("preferred_quality", preferredQuality);
       document.getElementById("sourceList").innerHTML = buildSourceCards(groups[idx].streams);
       bindSourceCards();
     });
@@ -1940,7 +1967,10 @@ async function loadContinueWatchingRow(grid, watchedShows, playback) {
         rating: d.vote_average,
         releaseDate: d.release_date || d.first_air_date,
         mediaType: mtype,
-        genreIds: (d.genres || []).map(g => g.id)
+        genreIds: (d.genres || []).map(g => g.id),
+        originalLanguage: d.original_language || "",
+        resumeSeason: item.nextSeason || null,
+        resumeEpisode: item.nextEpisode || null
       }));
       cards.push(card);
     } catch (_) {}
