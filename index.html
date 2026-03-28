@@ -157,6 +157,8 @@ input,select{font-family:inherit}
 .player-title{font-size:.9rem;font-weight:500;color:#fff;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .player-video-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative}
 .player-video-wrap video{width:100%;height:100%;background:#000}
+.sub-overlay{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);z-index:2;text-align:center;pointer-events:none;max-width:80%;font-size:1.4rem;line-height:1.5;color:#fff;text-shadow:0 0 4px #000,0 0 8px #000,1px 1px 2px #000;font-family:inherit;white-space:pre-wrap;padding:4px 12px;border-radius:4px;background:rgba(0,0,0,.5)}
+.sub-overlay:empty{display:none}
 .player-controls{position:absolute;bottom:0;left:0;right:0;z-index:3;padding:0 16px 14px;background:linear-gradient(transparent,rgba(0,0,0,.85));opacity:0;transition:opacity .3s}
 .player-overlay:hover .player-controls,.player-overlay.show-controls .player-controls{opacity:1}
 .progress-bar{width:100%;height:5px;background:rgba(255,255,255,.2);border-radius:3px;cursor:pointer;margin-bottom:10px;position:relative}
@@ -313,7 +315,8 @@ input,select{font-family:inherit}
     <div class="player-title" id="playerTitle"></div>
   </div>
   <div class="player-video-wrap">
-    <video id="playerVideo" autoplay crossorigin="anonymous"></video>
+    <video id="playerVideo" autoplay></video>
+    <div class="sub-overlay" id="subOverlay"></div>
   </div>
   <div class="player-controls">
     <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
@@ -404,8 +407,7 @@ let hlsInstance = null;
 let controlsTimer = null;
 let currentSubtitles = [];
 let activeSubTrackUrl = null;
-let currentStreamId = null;
-let currentStreamType = null;
+let parsedCues = [];
 const OPENSUBTITLES_BASE = "https://opensubtitles-v3.strem.io";
 
 // ── INIT ──
@@ -906,10 +908,10 @@ function openPlayer(url, title) {
   const video = document.getElementById("playerVideo");
   document.getElementById("playerTitle").textContent = title || "";
 
-  // clear old tracks
-  while (video.firstChild) video.removeChild(video.firstChild);
   activeSubTrackUrl = null;
   currentSubtitles = [];
+  parsedCues = [];
+  document.getElementById("subOverlay").textContent = "";
   document.getElementById("btnCC").classList.remove("active");
   document.getElementById("subDropdown").classList.remove("open");
   document.getElementById("subList").innerHTML = '<div class="sub-loading">Loading subtitles...</div>';
@@ -953,12 +955,13 @@ function closePlayer() {
   overlay.classList.remove("open");
   video.pause();
   video.removeAttribute("src");
-  while (video.firstChild) video.removeChild(video.firstChild);
   video.load();
   if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   currentSubtitles = [];
   activeSubTrackUrl = null;
+  parsedCues = [];
+  document.getElementById("subOverlay").textContent = "";
   document.getElementById("subDropdown").classList.remove("open");
 }
 
@@ -996,6 +999,7 @@ function updateProgress() {
   document.getElementById("progressFill").style.width = pct + "%";
   document.getElementById("playerTime").textContent =
     `${fmtTime(v.currentTime)} / ${fmtTime(v.duration)}`;
+  renderSubOverlay(v.currentTime);
 }
 
 function fmtTime(s) {
@@ -1096,55 +1100,71 @@ function renderSubList() {
 }
 
 async function loadSubtitleTrack(sub) {
-  const video = document.getElementById("playerVideo");
-  // remove existing tracks
-  while (video.querySelector("track")) video.querySelector("track").remove();
   activeSubTrackUrl = sub.url;
+  parsedCues = [];
+  document.getElementById("subOverlay").textContent = "";
   document.getElementById("btnCC").classList.add("active");
   renderSubList();
 
   try {
     const res = await fetch(sub.url);
-    let text = await res.text();
-    // Convert SRT to VTT if needed
-    if (!text.trimStart().startsWith("WEBVTT")) {
-      text = srtToVtt(text);
-    }
-    const blob = new Blob([text], { type: "text/vtt" });
-    const blobUrl = URL.createObjectURL(blob);
-    const track = document.createElement("track");
-    track.kind = "subtitles";
-    track.label = LANG_NAMES[sub.lang || ""] || sub.lang || "Subtitle";
-    track.srclang = sub.lang || "en";
-    track.src = blobUrl;
-    track.default = true;
-    video.appendChild(track);
-    // force show
-    if (video.textTracks && video.textTracks.length > 0) {
-      video.textTracks[video.textTracks.length - 1].mode = "showing";
-    }
+    const text = await res.text();
+    parsedCues = parseSrt(text);
   } catch (err) {
     console.error("Failed to load subtitle:", err);
+    parsedCues = [];
   }
 }
 
 function disableSubtitles() {
-  const video = document.getElementById("playerVideo");
   activeSubTrackUrl = null;
+  parsedCues = [];
+  document.getElementById("subOverlay").textContent = "";
   document.getElementById("btnCC").classList.remove("active");
-  for (let i = 0; i < video.textTracks.length; i++) {
-    video.textTracks[i].mode = "hidden";
-  }
   renderSubList();
 }
 
-function srtToVtt(srt) {
-  let vtt = "WEBVTT\n\n";
-  vtt += srt
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2");
-  return vtt;
+function parseSrt(text) {
+  const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const blocks = normalized.split(/\n\n+/).filter(b => b.trim());
+  const cues = [];
+  for (const block of blocks) {
+    const lines = block.trim().split("\n");
+    if (lines.length < 2) continue;
+    // find the timestamp line (skip WEBVTT header, sequence numbers, etc.)
+    let tsIdx = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (/-->/.test(lines[i])) { tsIdx = i; break; }
+    }
+    if (tsIdx === -1) continue;
+    const parts = lines[tsIdx].split("-->");
+    if (parts.length < 2) continue;
+    const start = parseTimestamp(parts[0].trim());
+    const end = parseTimestamp(parts[1].trim().split(/\s/)[0]);
+    if (start === null || end === null) continue;
+    const content = lines.slice(tsIdx + 1).join("\n").replace(/<[^>]+>/g, "").trim();
+    if (content) cues.push({ start, end, text: content });
+  }
+  return cues;
+}
+
+function parseTimestamp(ts) {
+  ts = ts.replace(",", ".");
+  const m = ts.match(/(?:(\d+):)?(\d{2}):(\d{2})\.(\d{3})/);
+  if (!m) return null;
+  const h = parseInt(m[1] || "0");
+  const min = parseInt(m[2]);
+  const sec = parseInt(m[3]);
+  const ms = parseInt(m[4]);
+  return h * 3600 + min * 60 + sec + ms / 1000;
+}
+
+function renderSubOverlay(time) {
+  const overlay = document.getElementById("subOverlay");
+  if (!parsedCues.length) { overlay.textContent = ""; return; }
+  const active = parsedCues.filter(c => time >= c.start && time <= c.end);
+  const txt = active.map(c => c.text).join("\n");
+  if (overlay.textContent !== txt) overlay.textContent = txt;
 }
 
 // ── SEARCH ──
