@@ -681,25 +681,14 @@ const DEBRIDIO_ADDON_URL = "https://addon.debridio.com/eyJhcGlfa2V5IjoiYmJiMmUzN
 const GENRE_MAP = {28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",14:"Fantasy",36:"History",27:"Horror",10402:"Music",9648:"Mystery",10749:"Romance",878:"Science Fiction",10770:"TV Movie",53:"Thriller",10752:"War",37:"Western",10759:"Action & Adventure",10762:"Kids",10763:"News",10764:"Reality",10766:"Soap",10767:"Talk",10768:"War & Politics"};
 const GENRE_MAP_ES = {28:"Acción",12:"Aventura",16:"Animación",35:"Comedia",80:"Crimen",99:"Documental",18:"Drama",10751:"Familia",14:"Fantasía",36:"Historia",27:"Terror",10402:"Música",9648:"Misterio",10749:"Romance",878:"Ciencia ficción",10770:"Película de TV",53:"Suspense",10752:"Guerra",37:"Western",10759:"Acción y aventura",10762:"Infantil",10763:"Noticias",10764:"Reality",10766:"Telenovela",10767:"Talk show",10768:"Guerra y política"};
 
+/** Home rows: each uses a distinct TMDB intent (buzz → breadth → acclaim). */
 const CATALOGS = [
-  { title: "Popular Movies", endpoint: "/movie/popular", params: { region: "US" } },
+  { title: "Trending Movies", endpoint: "/trending/movie/week" },
+  { title: "Trending TV", endpoint: "/trending/tv/week" },
+  { title: "Popular Movies", endpoint: "/movie/popular" },
   { title: "Popular TV", endpoint: "/tv/popular" },
-  {
-    title: "Top 10 Movies (US)",
-    endpoint: "/movie/now_playing",
-    params: { region: "US" },
-    limit: 10,
-  },
-  {
-    title: "Top 10 TV (US)",
-    endpoint: "/discover/tv",
-    params: {
-      watch_region: "US",
-      sort_by: "popularity.desc",
-      "vote_count.gte": "20",
-    },
-    limit: 10,
-  },
+  { title: "Top Rated Movies", endpoint: "/movie/top_rated" },
+  { title: "Top Rated TV", endpoint: "/tv/top_rated" },
 ];
 
 const UI_LANG_KEY = "fe_ui_lang";
@@ -997,10 +986,12 @@ function mediaTypeLabel(mediaType) {
 }
 
 const CATALOG_TITLE_ES = {
+  "Trending Movies": "Películas en tendencia",
+  "Trending TV": "Series en tendencia",
   "Popular Movies": "Películas populares",
   "Popular TV": "Series populares",
-  "Top 10 Movies (US)": "Top 10 películas (EE. UU.)",
-  "Top 10 TV (US)": "Top 10 series (EE. UU.)",
+  "Top Rated Movies": "Películas mejor valoradas",
+  "Top Rated TV": "Series mejor valoradas",
   "Continue Watching": "Continuar viendo",
   "My Trakt Watchlist": "Mi lista de Trakt"
 };
