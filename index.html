@@ -434,6 +434,8 @@ let currentTrailerKey = null;
 let currentSeasons = [];
 let currentSelectedSeason = null;
 let currentSelectedEpisode = null;
+let currentOriginalLang = null;
+let currentIsAnime = false;
 let hlsInstance = null;
 let controlsTimer = null;
 let currentSubtitles = [];
@@ -565,6 +567,7 @@ function closeModal() {
   resetModalMedia();
   currentItem = null; currentImdbId = null; currentTrailerKey = null;
   currentSeasons = []; currentSelectedSeason = null; currentSelectedEpisode = null;
+  currentOriginalLang = null; currentIsAnime = false;
 }
 
 function resetModalMedia() {
@@ -745,6 +748,8 @@ async function openModal(item) {
   currentSeasons = [];
   currentSelectedSeason = null;
   currentSelectedEpisode = null;
+  currentOriginalLang = null;
+  currentIsAnime = false;
 
   const o = document.getElementById("modalOverlay");
   resetModalMedia();
@@ -783,6 +788,10 @@ async function openModal(item) {
       tmdbFetch(`/${type}/${item.id}/credits`),
       tmdbFetch(`/${type}/${item.id}/videos`),
     ]);
+
+    currentOriginalLang = detail.original_language || null;
+    const genreIds = (detail.genres || []).map(g => g.id);
+    currentIsAnime = genreIds.includes(16) && currentOriginalLang === "ja";
 
     if (detail.tagline) document.getElementById("modalTagline").textContent = detail.tagline;
     if (detail.genres) {
@@ -957,6 +966,21 @@ function parseQuality(title) {
   return "Other";
 }
 
+function audioScore(title) {
+  const t = (title || "").toLowerCase();
+  if (currentIsAnime) {
+    if (/dual.?audio|multi/i.test(t)) return 0;
+    if (/japanese|jpn|ja\b/i.test(t)) return 1;
+    return 2;
+  }
+  if (currentOriginalLang && currentOriginalLang !== "en") {
+    if (/dual.?audio|multi/i.test(t)) return 0;
+    return 1;
+  }
+  if (/english|eng\b|en\b/i.test(t) || /dual.?audio|multi/i.test(t)) return 0;
+  return 1;
+}
+
 function groupByQuality(streams) {
   const order = ["4K", "1080p", "720p", "480p", "Other"];
   const groups = {};
@@ -966,6 +990,10 @@ function groupByQuality(streams) {
     const q = parseQuality(s.title || s.name || "");
     groups[q].push(s);
   });
+
+  for (const q of order) {
+    groups[q].sort((a, b) => audioScore(a.title || a.name) - audioScore(b.title || b.name));
+  }
 
   return order.filter(q => groups[q].length).map(q => ({ quality: q, streams: groups[q] }));
 }
@@ -1196,9 +1224,13 @@ async function fetchSubtitles(type, streamId) {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    currentSubtitles = data.subtitles || [];
+    const allSubs = data.subtitles || [];
+    currentSubtitles = allSubs.filter(s => {
+      const lang = (s.lang || s.SubLanguageID || "").toLowerCase();
+      return lang === "eng" || lang === "en";
+    });
     if (!currentSubtitles.length) {
-      subList.innerHTML = '<div class="sub-loading">No subtitles found</div>';
+      subList.innerHTML = '<div class="sub-loading">No English subtitles found</div>';
       return;
     }
     renderSubList();
