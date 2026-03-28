@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Forward English</title>
+<title>NFB</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -24,7 +24,8 @@ input,select{font-family:inherit}
 
 /* ── NAV ── */
 .nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;gap:18px;padding:16px 36px;background:rgba(13,13,13,.45);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);transition:background .3s}
-.nav-brand{font-size:1.25rem;font-weight:700;letter-spacing:-.3px;color:#fff;white-space:nowrap}
+.nav-brand{font-size:1.25rem;font-weight:700;letter-spacing:-.3px;color:#fff;white-space:nowrap;background:none;border:none;padding:0;cursor:pointer;font-family:inherit}
+.nav-brand:hover{opacity:.9}
 .nav-search{flex:1;max-width:400px;position:relative}
 .nav-search input{width:100%;padding:10px 14px 10px 40px;border-radius:12px;border:1px solid var(--glass-border);background:rgba(255,255,255,.06);color:var(--text);font-size:.88rem;outline:none;transition:all .25s;backdrop-filter:blur(8px)}
 .nav-search input:focus{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.1)}
@@ -301,7 +302,10 @@ input,select{font-family:inherit}
 
 /* ── SEARCH RESULTS ── */
 .search-results{padding:88px 36px 20px}
-.search-results-title{font-size:1.1rem;font-weight:600;margin-bottom:16px;letter-spacing:-.2px}
+.search-results-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.search-results-title{font-size:1.1rem;font-weight:600;letter-spacing:-.2px;margin:0;flex:1;min-width:0}
+.btn-search-back{flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:22px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:var(--text);font-size:.82rem;font-weight:600;cursor:pointer;transition:background .2s,border-color .2s;font-family:inherit}
+.btn-search-back:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22)}
 .search-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--poster-w),1fr));gap:18px}
 
 /* ── LOADING ── */
@@ -349,7 +353,7 @@ input,select{font-family:inherit}
 
 <!-- NAV -->
 <nav class="nav">
-  <div class="nav-brand">Forward English</div>
+  <button type="button" class="nav-brand" id="navHomeBtn" title="Back to home">NFB</button>
   <div class="nav-search">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="text" id="searchInput" placeholder="Search movies & TV shows...">
@@ -364,7 +368,7 @@ input,select{font-family:inherit}
 
 <!-- SETUP (first visit) -->
 <div class="setup" id="setupScreen" style="display:none">
-  <h1>Forward English</h1>
+  <h1>NFB</h1>
   <p>Welcome. Paste your <strong style="color:var(--text)">Debridio addon URL</strong> so Play can resolve streams (from <a href="https://debridio.com" target="_blank" style="color:var(--accent-glow)">debridio.com</a>). You can add or change it later in Settings.</p>
   <div class="setup-input">
     <input type="text" id="setupDebridInput" placeholder="https://addon.debridio.com/eyJ..." autocomplete="off">
@@ -467,7 +471,7 @@ input,select{font-family:inherit}
         <svg viewBox="0 0 24 24"><path d="M12.5 8C9.85 8 7.45 9.01 5.6 10.6L2 7v10h10l-3.6-3.6C9.68 12.15 11.03 11.5 12.5 11.5c3.31 0 6 2.69 6 6h3c0-4.97-4.03-9-9-9z"/></svg>
         <span class="player-skip-label">10</span>
       </button>
-      <button class="player-skip" id="btnSkipForward" title="Forward 10s (→)">
+      <button class="player-skip" id="btnSkipForward" title="Ahead 10s (→)">
         <svg viewBox="0 0 24 24"><path d="M11.5 8C14.15 8 16.55 9.01 18.4 10.6L22 7v10H12l3.6-3.6c-1.28-1.25-2.63-1.9-4.1-1.9-3.31 0-6 2.69-6 6H2.5c0-4.97 4.03-9 9-9z"/></svg>
         <span class="player-skip-label">10</span>
       </button>
@@ -623,6 +627,11 @@ function bindEvents() {
     document.getElementById("mainContent").style.display = "block";
     loadCatalogs();
     if (traktAccessToken) loadTraktData();
+  });
+
+  document.getElementById("navHomeBtn")?.addEventListener("click", goHome);
+  document.getElementById("searchResults").addEventListener("click", (e) => {
+    if (e.target.closest(".btn-search-back")) goHome();
   });
 
   document.getElementById("searchInput").addEventListener("input", (e) => {
@@ -1793,12 +1802,19 @@ function autoSelectAudioTrack() {
 }
 
 // ── SEARCH ──
+function searchResultsTopBar(titleHtml) {
+  return `<div class="search-results-top">
+    <button type="button" class="btn-search-back">← Home</button>
+    <div class="search-results-title">${titleHtml}</div>
+  </div>`;
+}
+
 async function runSearch(query) {
   const container = document.getElementById("searchResults");
   document.getElementById("heroCarousel").style.display = "none";
   document.getElementById("catalogRows").style.display = "none";
   container.style.display = "block";
-  container.innerHTML = `<div class="search-results-title">Searching...</div>
+  container.innerHTML = `${searchResultsTopBar("Searching…")}
     <div class="search-grid">${Array(6).fill('<div class="skeleton" style="width:100%"></div>').join("")}</div>`;
 
   try {
@@ -1810,14 +1826,17 @@ async function runSearch(query) {
       items = (data.results || []).filter(r => r.media_type === "movie" || r.media_type === "tv").map(normalizeItem);
     }
     if (!items.length) {
-      container.innerHTML = `<div class="message"><h3>No results</h3><p>Try a different search term.</p></div>`;
+      container.innerHTML = `${searchResultsTopBar("")}
+        <div class="message"><h3>No results</h3><p>Try a different search term.</p></div>`;
       return;
     }
-    container.innerHTML = `<div class="search-results-title">${aiMode ? "AI" : "Search"} results for "${esc(query)}"</div><div class="search-grid"></div>`;
+    container.innerHTML = `${searchResultsTopBar(`${aiMode ? "AI" : "Search"} results for "${esc(query)}"`)}
+      <div class="search-grid"></div>`;
     const grid = container.querySelector(".search-grid");
     items.forEach(item => grid.appendChild(createCard(item)));
   } catch (err) {
-    container.innerHTML = `<div class="message"><h3>Search failed</h3><p>${esc(err.message)}</p></div>`;
+    container.innerHTML = `${searchResultsTopBar("")}
+      <div class="message"><h3>Search failed</h3><p>${esc(err.message)}</p></div>`;
   }
 }
 
@@ -1825,6 +1844,28 @@ function hideSearch() {
   document.getElementById("searchResults").style.display = "none";
   document.getElementById("catalogRows").style.display = "block";
   document.getElementById("heroCarousel").style.display = "";
+}
+
+function goHome() {
+  const po = document.getElementById("playerOverlay");
+  if (po && po.classList.contains("open")) closePlayer();
+  closeSettings();
+  closeModal();
+
+  const setup = document.getElementById("setupScreen");
+  const main = document.getElementById("mainContent");
+  if (main && main.style.display === "none" && !localStorage.getItem("fe_onboarding_done")) {
+    localStorage.setItem("fe_onboarding_done", "1");
+    if (setup) setup.style.display = "none";
+    main.style.display = "block";
+    loadCatalogs();
+    if (traktAccessToken) loadTraktData();
+  }
+
+  const si = document.getElementById("searchInput");
+  if (si) si.value = "";
+  hideSearch();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function forwardAISearch(query) {
