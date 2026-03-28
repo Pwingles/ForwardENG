@@ -100,7 +100,18 @@ input,select{font-family:inherit}
 .rating-mid{color:var(--yellow)}
 .rating-low{color:var(--red)}
 .card-badge{position:absolute;top:8px;right:8px;padding:2px 7px;border-radius:6px;font-size:.58rem;font-weight:700;background:rgba(0,0,0,.55);color:rgba(255,255,255,.85);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1)}
-.card-continue-tag{font-size:.62rem;font-weight:600;color:var(--accent-glow);background:rgba(237,28,36,.1);padding:1px 6px;border-radius:6px;white-space:nowrap}
+.cw-card{flex:0 0 280px;border-radius:14px;overflow:hidden;cursor:pointer;background:var(--card);transition:transform .25s,box-shadow .25s;position:relative}
+.cw-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,.5)}
+.cw-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#1a1a1a}
+.cw-info{padding:10px 12px 12px;position:relative}
+.cw-title{font-size:.78rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cw-sub{font-size:.65rem;color:var(--text-dim);margin-top:2px;display:flex;gap:6px;align-items:center}
+.cw-ep{color:var(--accent-glow);font-weight:600}
+.cw-progress{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.08)}
+.cw-progress-bar{height:100%;background:var(--accent);border-radius:0 2px 2px 0;transition:width .3s}
+.cw-play-icon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;background:rgba(0,0,0,.55);border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;backdrop-filter:blur(6px)}
+.cw-card:hover .cw-play-icon{opacity:1}
+.cw-play-icon svg{width:18px;height:18px;fill:#fff;margin-left:2px}
 
 /* ── MODAL ── */
 .modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;align-items:flex-start;justify-content:center;padding:30px 20px;overflow-y:auto}
@@ -1861,10 +1872,12 @@ async function loadContinueWatchingRow(grid, watchedShows, playback) {
     const tmdbId = s.show.ids?.tmdb;
     if (!tmdbId || seen.has(tmdbId)) continue;
     seen.add(tmdbId);
+    const pct = prog.aired > 0 ? Math.round((prog.completed / prog.aired) * 100) : 0;
     items.push({
-      tmdbId,
-      type: "tv",
-      subtitle: `S${prog.next_episode.season}E${prog.next_episode.number}`,
+      tmdbId, type: "tv", pct,
+      epLabel: `S${prog.next_episode.season} E${prog.next_episode.number}`,
+      nextSeason: prog.next_episode.season,
+      nextEpisode: prog.next_episode.number,
       sortDate: new Date(s.last_watched_at)
     });
   }
@@ -1875,10 +1888,8 @@ async function loadContinueWatchingRow(grid, watchedShows, playback) {
       if (!tmdbId || seen.has("m" + tmdbId)) continue;
       seen.add("m" + tmdbId);
       items.push({
-        tmdbId,
-        type: "movie",
-        subtitle: `${Math.round(p.progress)}% watched`,
-        sortDate: new Date(p.paused_at)
+        tmdbId, type: "movie", pct: Math.round(p.progress),
+        epLabel: null, sortDate: new Date(p.paused_at)
       });
     }
     if (p.type === "episode" && p.show) {
@@ -1886,9 +1897,9 @@ async function loadContinueWatchingRow(grid, watchedShows, playback) {
       if (!tmdbId || seen.has(tmdbId)) continue;
       seen.add(tmdbId);
       items.push({
-        tmdbId,
-        type: "tv",
-        subtitle: `S${p.episode.season}E${p.episode.number} · ${Math.round(p.progress)}%`,
+        tmdbId, type: "tv", pct: Math.round(p.progress),
+        epLabel: `S${p.episode.season} E${p.episode.number}`,
+        nextSeason: p.episode.season, nextEpisode: p.episode.number,
         sortDate: new Date(p.paused_at)
       });
     }
@@ -1905,22 +1916,43 @@ async function loadContinueWatchingRow(grid, watchedShows, playback) {
     try {
       const mtype = item.type === "movie" ? "movie" : "tv";
       const d = await tmdbFetch(`/${mtype}/${item.tmdbId}`);
-      const card = createCard({
+
+      let thumbUrl = "";
+      if (mtype === "tv" && item.nextSeason && item.nextEpisode) {
+        try {
+          const ep = await tmdbFetch(`/tv/${item.tmdbId}/season/${item.nextSeason}/episode/${item.nextEpisode}`);
+          if (ep.still_path) thumbUrl = `${TMDB_IMG}w500${ep.still_path}`;
+        } catch (_) {}
+      }
+      if (!thumbUrl && d.backdrop_path) thumbUrl = `${TMDB_IMG}w780${d.backdrop_path}`;
+      if (!thumbUrl && d.poster_path) thumbUrl = `${TMDB_IMG}w342${d.poster_path}`;
+
+      const title = d.title || d.name;
+      const card = document.createElement("div");
+      card.className = "cw-card";
+      card.innerHTML = `
+        <div style="position:relative">
+          <img class="cw-thumb" src="${thumbUrl}" alt="${esc(title)}" loading="lazy">
+          <div class="cw-play-icon"><svg viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21"/></svg></div>
+        </div>
+        <div class="cw-info">
+          <div class="cw-title">${esc(title)}</div>
+          <div class="cw-sub">
+            ${item.epLabel ? `<span class="cw-ep">${item.epLabel}</span>` : ""}
+            <span>${mtype === "tv" ? "TV" : "Film"}</span>
+          </div>
+        </div>
+        <div class="cw-progress"><div class="cw-progress-bar" style="width:${item.pct}%"></div></div>`;
+
+      card.addEventListener("click", () => openModal({
         id: d.id,
-        title: d.title || d.name,
+        title,
         posterPath: d.poster_path,
         rating: d.vote_average,
         releaseDate: d.release_date || d.first_air_date,
         mediaType: mtype,
         genreIds: (d.genres || []).map(g => g.id)
-      });
-      const meta = card.querySelector(".card-meta");
-      if (meta) {
-        const tag = document.createElement("span");
-        tag.className = "card-continue-tag";
-        tag.textContent = item.subtitle;
-        meta.prepend(tag);
-      }
+      }));
       cards.push(card);
     } catch (_) {}
   }
