@@ -1040,7 +1040,7 @@ async function loadEpisodes(seasonNum, autoSelectEp) {
 }
 
 // ── WATCH / SOURCES ──
-function onWatchClick(autoPlay) {
+function onWatchClick() {
   if (!currentImdbId) {
     alert("No IMDB ID found for this title.");
     return;
@@ -1053,10 +1053,10 @@ function onWatchClick(autoPlay) {
     alert("Select an episode first.");
     return;
   }
-  fetchStreams(autoPlay !== false);
+  fetchStreams();
 }
 
-async function fetchStreams(autoPlay) {
+async function fetchStreams() {
   const panel = document.getElementById("sourcePanel");
   panel.classList.add("visible");
   panel.innerHTML = '<div class="source-loading">Fetching sources...</div>';
@@ -1081,20 +1081,6 @@ async function fetchStreams(autoPlay) {
 
     const groups = groupByQuality(streams);
     renderSources(panel, groups);
-
-    if (autoPlay) {
-      const prefIdx = groups.findIndex(g => g.quality === preferredQuality);
-      const targetGroup = groups[prefIdx !== -1 ? prefIdx : 0];
-      if (targetGroup && targetGroup.streams.length) {
-        if (prefIdx !== -1 && prefIdx !== 0) {
-          const tab = panel.querySelector(`.quality-tab[data-qtab="${prefIdx}"]`);
-          if (tab) tab.click();
-        }
-        const firstUrl = targetGroup.streams[0].url;
-        const firstTitle = (targetGroup.streams[0].title || targetGroup.streams[0].name || "").replace(/\n/g, " ").trim();
-        openPlayer(firstUrl, firstTitle);
-      }
-    }
   } catch (err) {
     panel.innerHTML = `<div class="no-sources">Failed to load sources: ${esc(err.message)}</div>`;
   }
