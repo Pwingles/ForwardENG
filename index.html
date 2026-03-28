@@ -41,9 +41,14 @@ input,select{font-family:inherit}
 .setup{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px;text-align:center;gap:24px}
 .setup h1{font-size:2.6rem;font-weight:800;color:#fff;letter-spacing:-.5px}
 .setup p{max-width:460px;color:var(--text-dim);line-height:1.7;font-size:.92rem}
-.setup-input{display:flex;gap:10px;width:100%;max-width:460px}
-.setup-input input{flex:1;padding:14px 18px;border-radius:24px;border:1px solid var(--glass-border);background:rgba(255,255,255,.06);color:var(--text);font-size:.95rem;outline:none;transition:border .2s}
+.setup-input{display:flex;gap:10px;width:100%;max-width:520px;flex-wrap:wrap}
+.setup-input input{flex:1;min-width:200px;padding:14px 18px;border-radius:24px;border:1px solid var(--glass-border);background:rgba(255,255,255,.06);color:var(--text);font-size:.95rem;outline:none;transition:border .2s}
 .setup-input input:focus{border-color:rgba(255,255,255,.2)}
+.setup-callout{max-width:520px;text-align:left;padding:16px 18px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);font-size:.82rem;line-height:1.65;color:var(--text-dim)}
+.setup-callout strong{color:var(--text);font-weight:600}
+.setup-callout code{font-size:.78rem;background:rgba(0,0,0,.35);padding:2px 6px;border-radius:6px;color:var(--accent-glow);word-break:break-all}
+.setup-skip{margin-top:8px;background:transparent;border:none;color:var(--text-dim);font-size:.82rem;cursor:pointer;text-decoration:underline}
+.setup-skip:hover{color:var(--text)}
 .btn-primary{padding:14px 28px;border-radius:24px;background:var(--accent);color:#fff;font-weight:600;font-size:.92rem;transition:all .25s;box-shadow:0 4px 16px rgba(90,156,245,.25)}
 .btn-primary:hover{opacity:.9;box-shadow:0 4px 24px rgba(90,156,245,.35)}
 
@@ -357,14 +362,19 @@ input,select{font-family:inherit}
   </div>
 </nav>
 
-<!-- SETUP -->
+<!-- SETUP (first visit) -->
 <div class="setup" id="setupScreen" style="display:none">
   <h1>Forward English</h1>
-  <p>A personal movie &amp; TV discovery dashboard. To stream, add your Real-Debrid API key in Settings.</p>
+  <p>Welcome. Paste your <strong style="color:var(--text)">Debridio addon URL</strong> so Play can resolve streams (from <a href="https://debridio.com" target="_blank" style="color:var(--accent-glow)">debridio.com</a>). You can add or change it later in Settings.</p>
   <div class="setup-input">
-    <input type="text" id="setupKeyInput" placeholder="Paste your Real-Debrid API key (optional)">
+    <input type="text" id="setupDebridInput" placeholder="https://addon.debridio.com/eyJ..." autocomplete="off">
     <button class="btn-primary" id="setupSaveBtn">Get Started</button>
   </div>
+  <div class="setup-callout">
+    <strong>Chrome or Edge — audio track switching</strong><br>
+    For multiple audio tracks on some files, enable the experimental flag: open <code>chrome://flags</code> or <code>edge://flags</code>, search for <strong>Experimental Web Platform features</strong>, set it to <strong>Enabled</strong>, then restart the browser. (Safari often exposes audio tracks without this.)
+  </div>
+  <button type="button" class="setup-skip" id="setupSkipBtn">Skip for now — browse only</button>
 </div>
 
 <!-- MAIN -->
@@ -568,20 +578,51 @@ let heroTimer = null;
 let heroProgressTimer = null;
 const HERO_INTERVAL = 8000;
 const OPENSUBTITLES_BASE = "https://opensubtitles-v3.strem.io";
+let eventsBound = false;
 
 // ── INIT ──
 function init() {
+  if (!eventsBound) bindEvents();
+
+  if (!localStorage.getItem("fe_onboarding_done")) {
+    document.getElementById("setupScreen").style.display = "flex";
+    document.getElementById("mainContent").style.display = "none";
+    const sd = document.getElementById("setupDebridInput");
+    if (sd) sd.value = debridUrl || "";
+    return;
+  }
+
   document.getElementById("setupScreen").style.display = "none";
   document.getElementById("mainContent").style.display = "block";
   loadCatalogs();
   if (traktAccessToken) loadTraktData();
-  bindEvents();
+}
+
+function finishOnboarding() {
+  const url = document.getElementById("setupDebridInput")?.value.trim() || "";
+  if (url) {
+    debridUrl = url;
+    localStorage.setItem("debridio_url", url);
+  }
+  localStorage.setItem("fe_onboarding_done", "1");
+  document.getElementById("setupScreen").style.display = "none";
+  document.getElementById("mainContent").style.display = "block";
+  loadCatalogs();
+  if (traktAccessToken) loadTraktData();
 }
 
 // ── EVENTS ──
 function bindEvents() {
-  document.getElementById("setupSaveBtn")?.addEventListener("click", () => {
-    init();
+  if (eventsBound) return;
+  eventsBound = true;
+
+  document.getElementById("setupSaveBtn")?.addEventListener("click", finishOnboarding);
+  document.getElementById("setupSkipBtn")?.addEventListener("click", () => {
+    localStorage.setItem("fe_onboarding_done", "1");
+    document.getElementById("setupScreen").style.display = "none";
+    document.getElementById("mainContent").style.display = "block";
+    loadCatalogs();
+    if (traktAccessToken) loadTraktData();
   });
 
   document.getElementById("searchInput").addEventListener("input", (e) => {
