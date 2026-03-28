@@ -100,6 +100,7 @@ input,select{font-family:inherit}
 .rating-mid{color:var(--yellow)}
 .rating-low{color:var(--red)}
 .card-badge{position:absolute;top:8px;right:8px;padding:2px 7px;border-radius:6px;font-size:.58rem;font-weight:700;background:rgba(0,0,0,.55);color:rgba(255,255,255,.85);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1)}
+.card-continue-tag{font-size:.62rem;font-weight:600;color:var(--accent-glow);background:rgba(237,28,36,.1);padding:1px 6px;border-radius:6px;white-space:nowrap}
 
 /* ── MODAL ── */
 .modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;align-items:flex-start;justify-content:center;padding:30px 20px;overflow-y:auto}
@@ -1815,11 +1816,12 @@ async function refreshTraktToken() {
 async function loadTraktData() {
   if (!traktAccessToken) return;
   try {
-    const [wm, ws, wlm, wls] = await Promise.all([
+    const [wm, ws, wlm, wls, playback] = await Promise.all([
       traktFetch("/sync/watched/movies").then(r => r.ok ? r.json() : []),
       traktFetch("/sync/watched/shows").then(r => r.ok ? r.json() : []),
       traktFetch("/users/me/watchlist/movies?sort=added").then(r => r.ok ? r.json() : []),
-      traktFetch("/users/me/watchlist/shows?sort=added").then(r => r.ok ? r.json() : [])
+      traktFetch("/users/me/watchlist/shows?sort=added").then(r => r.ok ? r.json() : []),
+      traktFetch("/sync/playback").then(r => r.ok ? r.json() : [])
     ]);
     traktWatchedSet.clear();
     traktWatchlistSet.clear();
@@ -1828,17 +1830,113 @@ async function loadTraktData() {
     wlm.forEach(i => { if (i.movie?.ids?.imdb) traktWatchlistSet.add(i.movie.ids.imdb); });
     wls.forEach(i => { if (i.show?.ids?.imdb) traktWatchlistSet.add(i.show.ids.imdb); });
 
-    loadTraktRows([...wlm, ...wls]);
+    const grid = document.getElementById("catalogRows");
+    if (grid) {
+      await loadContinueWatchingRow(grid, ws, playback);
+      await loadTraktWatchlistRow(grid, [...wlm, ...wls]);
+    }
   } catch (e) { console.warn("Trakt sync:", e); }
 }
 
-async function loadTraktRows(watchlistItems) {
+async function loadContinueWatchingRow(grid, watchedShows, playback) {
+  const items = [];
+  const seen = new Set();
+
+  const recentShows = [...watchedShows]
+    .sort((a, b) => new Date(b.last_watched_at) - new Date(a.last_watched_at))
+    .slice(0, 20);
+
+  const progressResults = await Promise.allSettled(
+    recentShows.map(s =>
+      traktFetch(`/shows/${s.show.ids.trakt}/progress/watched`)
+        .then(r => r.ok ? r.json() : null)
+        .then(prog => ({ show: s, progress: prog }))
+    )
+  );
+
+  for (const result of progressResults) {
+    if (result.status !== "fulfilled" || !result.value.progress) continue;
+    const { show: s, progress: prog } = result.value;
+    if (prog.completed >= prog.aired || !prog.next_episode) continue;
+    const tmdbId = s.show.ids?.tmdb;
+    if (!tmdbId || seen.has(tmdbId)) continue;
+    seen.add(tmdbId);
+    items.push({
+      tmdbId,
+      type: "tv",
+      subtitle: `S${prog.next_episode.season}E${prog.next_episode.number}`,
+      sortDate: new Date(s.last_watched_at)
+    });
+  }
+
+  for (const p of playback) {
+    if (p.type === "movie" && p.movie) {
+      const tmdbId = p.movie.ids?.tmdb;
+      if (!tmdbId || seen.has("m" + tmdbId)) continue;
+      seen.add("m" + tmdbId);
+      items.push({
+        tmdbId,
+        type: "movie",
+        subtitle: `${Math.round(p.progress)}% watched`,
+        sortDate: new Date(p.paused_at)
+      });
+    }
+    if (p.type === "episode" && p.show) {
+      const tmdbId = p.show.ids?.tmdb;
+      if (!tmdbId || seen.has(tmdbId)) continue;
+      seen.add(tmdbId);
+      items.push({
+        tmdbId,
+        type: "tv",
+        subtitle: `S${p.episode.season}E${p.episode.number} · ${Math.round(p.progress)}%`,
+        sortDate: new Date(p.paused_at)
+      });
+    }
+  }
+
+  items.sort((a, b) => b.sortDate - a.sortDate);
+  if (!items.length) return;
+
+  const row = createRowSkeleton("Continue Watching");
+  grid.insertBefore(row, grid.firstChild);
+
+  const cards = [];
+  for (const item of items.slice(0, 20)) {
+    try {
+      const mtype = item.type === "movie" ? "movie" : "tv";
+      const d = await tmdbFetch(`/${mtype}/${item.tmdbId}`);
+      const card = createCard({
+        id: d.id,
+        title: d.title || d.name,
+        posterPath: d.poster_path,
+        rating: d.vote_average,
+        releaseDate: d.release_date || d.first_air_date,
+        mediaType: mtype,
+        genreIds: (d.genres || []).map(g => g.id)
+      });
+      const meta = card.querySelector(".card-meta");
+      if (meta) {
+        const tag = document.createElement("span");
+        tag.className = "card-continue-tag";
+        tag.textContent = item.subtitle;
+        meta.prepend(tag);
+      }
+      cards.push(card);
+    } catch (_) {}
+  }
+
+  const scrollArea = document.createElement("div");
+  scrollArea.className = "row-scroll";
+  cards.forEach(c => scrollArea.appendChild(c));
+  row.querySelector(".row-loading")?.remove();
+  row.appendChild(scrollArea);
+}
+
+async function loadTraktWatchlistRow(grid, watchlistItems) {
   if (!watchlistItems.length) return;
-  const grid = document.getElementById("catalogRows");
-  if (!grid) return;
 
   const row = createRowSkeleton("My Trakt Watchlist");
-  grid.insertBefore(row, grid.firstChild);
+  grid.insertBefore(row, grid.children[1] || null);
 
   const cards = [];
   const batch = watchlistItems.slice(0, 20);
