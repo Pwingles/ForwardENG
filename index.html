@@ -2059,11 +2059,26 @@ function tickTraktScrobble() {
   traktSyncHistoryIfFinished(p);
 }
 
+function getPlayerDisplayTitle(streamFallback) {
+  const fb = (streamFallback || "").trim();
+  if (!currentItem?.title) return fb;
+  const show = currentItem.title.trim();
+  if (currentItem.mediaType !== "tv") return show;
+  let epLine = document.getElementById("epName")?.textContent?.trim();
+  if (!epLine && currentSelectedSeason != null && currentSelectedEpisode != null) {
+    const btn = document.querySelector(".ep-btn.active");
+    const name = btn ? (btn.dataset.name || "") : "";
+    epLine = formatEpisodeSelectionLabel(currentSelectedSeason, currentSelectedEpisode, name);
+  }
+  if (epLine) return `${show} — ${epLine}`;
+  return show;
+}
+
 function openPlayer(url, title) {
   if (!url) return;
   const overlay = document.getElementById("playerOverlay");
   const video = document.getElementById("playerVideo");
-  document.getElementById("playerTitle").textContent = title || "";
+  document.getElementById("playerTitle").textContent = getPlayerDisplayTitle(title);
 
   activeSubTrackUrl = null;
   currentSubtitles = [];
