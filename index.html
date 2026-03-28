@@ -248,7 +248,7 @@ input,select{font-family:inherit}
   display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;z-index:3;transition:all .25s var(--ease-out);border:1px solid rgba(255,255,255,.12)
 }
 .modal-close:hover{background:rgba(109,140,255,.35);border-color:rgba(109,140,255,.4);transform:scale(1.05)}
-.modal-body{padding:30px 34px 36px;position:relative}
+.modal-body{padding:30px 34px calc(36px + env(safe-area-inset-bottom, 0px));position:relative}
 .modal-title{font-family:'Syne',sans-serif;font-size:clamp(1.35rem,3vw,1.85rem);font-weight:800;margin-bottom:6px;text-align:center;letter-spacing:-.02em;line-height:1.15}
 .modal-tagline{font-size:.82rem;color:var(--text-dim);font-style:italic;margin-bottom:14px;text-align:center}
 .modal-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin-bottom:16px;font-size:.82rem;color:var(--text-dim)}
@@ -342,19 +342,23 @@ input,select{font-family:inherit}
 .stream-item-play{color:var(--accent-glow);font-size:.7rem;font-weight:600;white-space:nowrap}
 
 /* ── VIDEO PLAYER ── */
-.player-overlay{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column}
+.player-overlay{position:fixed;inset:0;z-index:500;background:#000;display:none;flex-direction:column;min-height:0;overflow:hidden}
 .player-overlay.open{display:flex}
 .player-top-bar{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;gap:14px;padding:16px 24px;background:linear-gradient(rgba(0,0,0,.7),transparent);opacity:0;transition:opacity .35s}
 .player-overlay:hover .player-top-bar,.player-overlay.show-controls .player-top-bar{opacity:1}
 .player-close{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.15rem;transition:background .2s;border:1px solid rgba(255,255,255,.08)}
 .player-close:hover{background:rgba(255,255,255,.2)}
 .player-title{font-size:.88rem;font-weight:500;color:rgba(255,255,255,.85);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.player-video-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer}
-.player-video-wrap video{width:100%;height:100%;background:#000}
+.player-video-wrap{flex:1 1 0;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;overflow:hidden}
+.player-video-wrap video{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center;background:#000}
 .player-center-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;opacity:0;transition:opacity .25s;border:2px solid rgba(255,255,255,.15)}
 .player-center-play svg{width:32px;height:32px;fill:#fff;margin-left:3px}
 .player-center-play.visible{opacity:1}
-.sub-overlay{position:absolute;bottom:12%;left:50%;transform:translateX(-50%);z-index:4;text-align:center;pointer-events:none;max-width:80%;font-size:clamp(1.1rem, 2.5vw, 1.8rem);line-height:1.45;color:#fff;text-shadow:0 0 6px #000,0 0 12px #000,2px 2px 4px #000;font-family:inherit;white-space:pre-wrap;padding:6px 16px;border-radius:8px;background:rgba(0,0,0,.6)}
+.sub-overlay{position:absolute;left:50%;transform:translateX(-50%);z-index:4;text-align:center;pointer-events:none;max-width:min(92%,52em);font-size:clamp(1.1rem, 2.5vw, 1.8rem);line-height:1.45;color:#fff;text-shadow:0 0 6px #000,0 0 12px #000,2px 2px 4px #000;font-family:inherit;white-space:pre-wrap;padding:6px 16px;border-radius:8px;background:rgba(0,0,0,.6);box-sizing:border-box;
+  bottom:calc(56px + env(safe-area-inset-bottom, 0px));
+  transition:bottom .35s ease}
+.player-overlay:hover .sub-overlay,.player-overlay.show-controls .sub-overlay{
+  bottom:calc(118px + env(safe-area-inset-bottom, 0px))}
 .sub-overlay:empty{display:none}
 .player-controls{position:absolute;bottom:0;left:0;right:0;z-index:3;padding:0 16px 12px;background:linear-gradient(transparent,rgba(0,0,0,.85));opacity:0;transition:opacity .35s}
 .player-overlay:hover .player-controls,.player-overlay.show-controls .player-controls{opacity:1}
@@ -475,7 +479,7 @@ input,select{font-family:inherit}
   .row-scroll-btn svg{width:18px;height:18px}
   :root{--poster-w:120px;--cw-card-w:240px}
   .search-results{padding:80px 16px 16px}
-  .modal-body{padding:20px 20px 24px}
+  .modal-body{padding:20px 20px calc(24px + env(safe-area-inset-bottom, 0px))}
   .modal{border-radius:16px}
   .episode-grid{grid-template-columns:repeat(auto-fill,minmax(44px,1fr))}
   .settings-panel{padding:24px;border-radius:16px}
@@ -730,6 +734,8 @@ const UI_STR = {
     sourcePlay: "▶ Play",
     sourceBadge: "RD",
     seasonEpisodes: "Season {s} ({n} episodes)",
+    epCourTitle: "Season {s} · E{e}: {t}",
+    epCourOnly: "Season {s} · E{e}",
     epPrefix: "E",
     episode: "Episode",
     loadEpFail: "Failed to load episodes",
@@ -792,6 +798,8 @@ const UI_STR = {
     sourcePlay: "▶ Reproducir",
     sourceBadge: "RD",
     seasonEpisodes: "Temporada {s} ({n} episodios)",
+    epCourTitle: "Temporada {s} · E{e}: {t}",
+    epCourOnly: "Temporada {s} · E{e}",
     epPrefix: "E",
     episode: "Episodio",
     loadEpFail: "Error al cargar episodios",
@@ -829,6 +837,32 @@ function t(key) {
 
 function seasonOptionLabel(num, epCount) {
   return t("seasonEpisodes").replace("{s}", String(num)).replace("{n}", String(epCount));
+}
+
+function usesVirtualCourSplit() {
+  const id = currentItem && currentItem.id;
+  const split = id != null ? STREAM_SEASON_SPLIT_AFTER_EP[id] : null;
+  if (split == null || !currentSeasons || currentSeasons.length !== 1) return false;
+  const s = currentSeasons[0];
+  return s.season_number === 1 && (s.episode_count || 0) > split;
+}
+
+function formatEpisodeSelectionLabel(tmdbSeason, tmdbEp, name) {
+  const split = currentItem && STREAM_SEASON_SPLIT_AFTER_EP[currentItem.id];
+  if (split != null && tmdbSeason === 1) {
+    if (tmdbEp > split) {
+      const e = tmdbEp - split;
+      return name
+        ? t("epCourTitle").replace("{s}", "2").replace("{e}", String(e)).replace("{t}", name)
+        : t("epCourOnly").replace("{s}", "2").replace("{e}", String(e));
+    }
+    return name
+      ? t("epCourTitle").replace("{s}", "1").replace("{e}", String(tmdbEp)).replace("{t}", name)
+      : t("epCourOnly").replace("{s}", "1").replace("{e}", String(tmdbEp));
+  }
+  return name
+    ? `${t("epPrefix")}${tmdbEp}: ${name}`
+    : `${t("episode")} ${tmdbEp}`;
 }
 
 function applyStaticUiStrings() {
@@ -981,6 +1015,24 @@ let heroProgressTimer = null;
 const HERO_INTERVAL = 8000;
 const OPENSUBTITLES_BASE = "https://opensubtitles-v3.strem.io";
 let eventsBound = false;
+
+/**
+ * TMDB sometimes lists a full year (or split cours) as one season, while Stremio/debrid
+ * releases and OpenSubtitles use separate seasons (e.g. cour 2 = "Season 2").
+ * Key = TMDB TV id; value = last episode number still counted as stream "season 1"
+ * (episodes after that map to season 2 with episode = tmdbEp - value).
+ */
+const STREAM_SEASON_SPLIT_AFTER_EP = {
+  209867: 28, // Frieren — TMDB season 1 has 38 eps; torrents use S1(28) + S2(10)
+};
+
+function toStreamSeasonEpisode(tmdbShowId, season, episode) {
+  const splitAfter = STREAM_SEASON_SPLIT_AFTER_EP[tmdbShowId];
+  if (splitAfter != null && season === 1 && episode > splitAfter) {
+    return { season: 2, episode: episode - splitAfter };
+  }
+  return { season, episode };
+}
 
 // ── INIT ──
 function init() {
@@ -1505,19 +1557,72 @@ function showTrailer() {
 function renderSeasonPicker(resumeSeason, resumeEpisode) {
   const picker = document.getElementById("episodePicker");
   const sel = document.getElementById("seasonSelect");
+  const split = currentItem && STREAM_SEASON_SPLIT_AFTER_EP[currentItem.id];
+
+  if (usesVirtualCourSplit() && split != null) {
+    const total = currentSeasons[0].episode_count || 0;
+    const n1 = split;
+    const n2 = total - split;
+    sel.innerHTML =
+      `<option value="split-1">${seasonOptionLabel(1, n1)}</option>` +
+      `<option value="split-2">${seasonOptionLabel(2, n2)}</option>`;
+    sel.onchange = () => loadEpisodes(sel.value, null);
+
+    let startKey = "split-1";
+    let autoEp = resumeEpisode != null ? resumeEpisode : null;
+
+    if (resumeSeason === 2) {
+      startKey = "split-2";
+      if (resumeEpisode != null) autoEp = split + resumeEpisode;
+    } else if (resumeSeason === 1 && resumeEpisode != null && resumeEpisode > split) {
+      startKey = "split-2";
+      autoEp = resumeEpisode;
+    } else if (resumeSeason === 1 && resumeEpisode != null) {
+      startKey = "split-1";
+      autoEp = resumeEpisode;
+    } else if (resumeSeason == null && resumeEpisode != null) {
+      if (resumeEpisode > split) {
+        startKey = "split-2";
+        autoEp = resumeEpisode;
+      } else {
+        startKey = "split-1";
+        autoEp = resumeEpisode;
+      }
+    } else if (resumeSeason == null && resumeEpisode == null) {
+      autoEp = 1;
+    }
+
+    sel.value = startKey;
+    loadEpisodes(startKey, autoEp);
+    picker.classList.add("visible");
+    return;
+  }
+
   sel.innerHTML = currentSeasons.map(s =>
     `<option value="${s.season_number}">${seasonOptionLabel(s.season_number, s.episode_count)}</option>`
   ).join("");
   picker.classList.add("visible");
-  sel.addEventListener("change", () => loadEpisodes(parseInt(sel.value)));
+  sel.onchange = () => loadEpisodes(parseInt(sel.value, 10), null);
   const startSeason = resumeSeason && currentSeasons.some(s => s.season_number === resumeSeason)
     ? resumeSeason : currentSeasons[0].season_number;
-  sel.value = startSeason;
+  sel.value = String(startSeason);
   loadEpisodes(startSeason, resumeEpisode || (startSeason === currentSeasons[0].season_number ? 1 : null));
 }
 
-async function loadEpisodes(seasonNum, autoSelectEp) {
-  currentSelectedSeason = seasonNum;
+async function loadEpisodes(seasonKey, autoSelectEp) {
+  const split = currentItem && STREAM_SEASON_SPLIT_AFTER_EP[currentItem.id];
+  let tmdbSeasonNum;
+  let virtualSplitPart = null;
+
+  if (typeof seasonKey === "string" && seasonKey.startsWith("split-")) {
+    virtualSplitPart = parseInt(seasonKey.split("-")[1], 10);
+    tmdbSeasonNum = 1;
+    currentSelectedSeason = 1;
+  } else {
+    tmdbSeasonNum = typeof seasonKey === "number" ? seasonKey : parseInt(String(seasonKey), 10);
+    currentSelectedSeason = tmdbSeasonNum;
+  }
+
   currentSelectedEpisode = null;
   const grid = document.getElementById("episodeGrid");
   const epName = document.getElementById("epName");
@@ -1528,28 +1633,46 @@ async function loadEpisodes(seasonNum, autoSelectEp) {
   document.getElementById("sourcePanel").innerHTML = "";
 
   try {
-    const data = await tmdbFetch(`/tv/${currentItem.id}/season/${seasonNum}`);
-    const eps = data.episodes || [];
-    grid.innerHTML = eps.map(ep =>
-      `<button class="ep-btn" data-ep="${ep.episode_number}" data-name="${esc(ep.name || "")}" title="${esc(ep.name || `${t("episode")} ${ep.episode_number}`)}">
-        ${ep.episode_number}
-      </button>`
-    ).join("");
+    const data = await tmdbFetch(`/tv/${currentItem.id}/season/${tmdbSeasonNum}`);
+    let eps = data.episodes || [];
+    if (virtualSplitPart === 1 && split != null) {
+      eps = eps.filter(ep => ep.episode_number <= split);
+    } else if (virtualSplitPart === 2 && split != null) {
+      eps = eps.filter(ep => ep.episode_number > split);
+    }
+
+    grid.innerHTML = eps.map(ep => {
+      const displayNum =
+        virtualSplitPart === 2 && split != null ? ep.episode_number - split : ep.episode_number;
+      const tip = esc(ep.name || `${t("episode")} ${displayNum}`);
+      return `<button class="ep-btn" data-ep="${ep.episode_number}" data-name="${esc(ep.name || "")}" title="${tip}">
+        ${displayNum}
+      </button>`;
+    }).join("");
 
     grid.querySelectorAll(".ep-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         grid.querySelectorAll(".ep-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
-        currentSelectedEpisode = parseInt(btn.dataset.ep);
-        epName.textContent = btn.dataset.name
-          ? `${t("epPrefix")}${currentSelectedEpisode}: ${btn.dataset.name}`
-          : `${t("episode")} ${currentSelectedEpisode}`;
+        currentSelectedEpisode = parseInt(btn.dataset.ep, 10);
+        epName.textContent = formatEpisodeSelectionLabel(
+          currentSelectedSeason,
+          currentSelectedEpisode,
+          btn.dataset.name || ""
+        );
         document.getElementById("sourcePanel").classList.remove("visible");
         document.getElementById("sourcePanel").innerHTML = "";
       });
     });
 
-    const pickEp = autoSelectEp || 1;
+    let pickEp;
+    if (autoSelectEp != null) {
+      pickEp = autoSelectEp;
+    } else if (virtualSplitPart === 2 && split != null) {
+      pickEp = split + 1;
+    } else {
+      pickEp = 1;
+    }
     const target = grid.querySelector(`.ep-btn[data-ep="${pickEp}"]`);
     if (target) target.click();
   } catch (err) {
@@ -1583,7 +1706,8 @@ async function fetchStreams() {
   const type = currentItem.mediaType === "tv" ? "series" : "movie";
   let streamId = currentImdbId;
   if (type === "series") {
-    streamId = `${currentImdbId}:${currentSelectedSeason}:${currentSelectedEpisode}`;
+    const se = toStreamSeasonEpisode(currentItem.id, currentSelectedSeason, currentSelectedEpisode);
+    streamId = `${currentImdbId}:${se.season}:${se.episode}`;
   }
 
   try {
@@ -1749,7 +1873,8 @@ function onAudioTrackAdd() {
 function getPlaybackKey() {
   if (!currentImdbId) return null;
   if (currentItem?.mediaType === "tv" && currentSelectedSeason && currentSelectedEpisode) {
-    return `pb_${currentImdbId}_s${currentSelectedSeason}e${currentSelectedEpisode}`;
+    const se = toStreamSeasonEpisode(currentItem.id, currentSelectedSeason, currentSelectedEpisode);
+    return `pb_${currentImdbId}_s${se.season}e${se.episode}`;
   }
   return `pb_${currentImdbId}`;
 }
@@ -1774,9 +1899,10 @@ function getTraktProgressPct() {
 
 function buildTraktScrobbleBody(progress) {
   if (currentItem?.mediaType === "tv" && currentSelectedSeason != null && currentSelectedEpisode != null) {
+    const se = toStreamSeasonEpisode(currentItem.id, currentSelectedSeason, currentSelectedEpisode);
     return {
       show: { ids: { imdb: currentImdbId } },
-      episode: { season: currentSelectedSeason, number: currentSelectedEpisode },
+      episode: { season: se.season, number: se.episode },
       progress
     };
   }
@@ -1806,7 +1932,8 @@ function traktSyncHistoryIfFinished(progress) {
   traktHistorySynced = true;
   let body;
   if (currentItem?.mediaType === "tv" && currentSelectedSeason && currentSelectedEpisode) {
-    body = { shows: [{ ids: { imdb: currentImdbId }, seasons: [{ number: currentSelectedSeason, episodes: [{ number: currentSelectedEpisode }] }] }] };
+    const se = toStreamSeasonEpisode(currentItem.id, currentSelectedSeason, currentSelectedEpisode);
+    body = { shows: [{ ids: { imdb: currentImdbId }, seasons: [{ number: se.season, episodes: [{ number: se.episode }] }] }] };
   } else {
     body = { movies: [{ ids: { imdb: currentImdbId } }] };
   }
@@ -1908,7 +2035,8 @@ function openPlayer(url, title) {
     const type = currentItem?.mediaType === "tv" ? "series" : "movie";
     let subId = currentImdbId;
     if (type === "series" && currentSelectedSeason && currentSelectedEpisode) {
-      subId = `${currentImdbId}:${currentSelectedSeason}:${currentSelectedEpisode}`;
+      const se = toStreamSeasonEpisode(currentItem.id, currentSelectedSeason, currentSelectedEpisode);
+      subId = `${currentImdbId}:${se.season}:${se.episode}`;
     }
     fetchSubtitles(type, subId);
   }
