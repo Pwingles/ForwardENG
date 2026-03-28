@@ -682,24 +682,24 @@ const GENRE_MAP = {28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Cri
 const GENRE_MAP_ES = {28:"Acción",12:"Aventura",16:"Animación",35:"Comedia",80:"Crimen",99:"Documental",18:"Drama",10751:"Familia",14:"Fantasía",36:"Historia",27:"Terror",10402:"Música",9648:"Misterio",10749:"Romance",878:"Ciencia ficción",10770:"Película de TV",53:"Suspense",10752:"Guerra",37:"Western",10759:"Acción y aventura",10762:"Infantil",10763:"Noticias",10764:"Reality",10766:"Telenovela",10767:"Talk show",10768:"Guerra y política"};
 
 const CATALOGS = [
-  { title:"Trending Movies",  endpoint:"/trending/movie/week" },
-  { title:"Now Playing",      endpoint:"/movie/now_playing" },
-  { title:"Popular Movies",   endpoint:"/movie/popular" },
-  { title:"Top Rated Movies", endpoint:"/movie/top_rated" },
-  { title:"Upcoming",         endpoint:"/movie/upcoming" },
+  { title: "Popular Movies", endpoint: "/movie/popular", params: { region: "US" } },
+  { title: "Popular TV", endpoint: "/tv/popular" },
   {
-    title: "Latest Horror",
-    endpoint: "/discover/movie",
-    params: {
-      with_genres: "27",
-      sort_by: "primary_release_date.desc",
-      "vote_count.gte": "40",
-      include_adult: "false",
-    },
+    title: "Top 10 Movies (US)",
+    endpoint: "/movie/now_playing",
+    params: { region: "US" },
+    limit: 10,
   },
-  { title:"Trending TV",      endpoint:"/trending/tv/week" },
-  { title:"Popular TV",       endpoint:"/tv/popular" },
-  { title:"Top Rated TV",     endpoint:"/tv/top_rated" },
+  {
+    title: "Top 10 TV (US)",
+    endpoint: "/discover/tv",
+    params: {
+      watch_region: "US",
+      sort_by: "popularity.desc",
+      "vote_count.gte": "20",
+    },
+    limit: 10,
+  },
 ];
 
 const UI_LANG_KEY = "fe_ui_lang";
@@ -997,15 +997,10 @@ function mediaTypeLabel(mediaType) {
 }
 
 const CATALOG_TITLE_ES = {
-  "Trending Movies": "Películas en tendencia",
-  "Now Playing": "En cartelera",
   "Popular Movies": "Películas populares",
-  "Top Rated Movies": "Películas mejor valoradas",
-  "Upcoming": "Próximos estrenos",
-  "Latest Horror": "Último terror",
-  "Trending TV": "Series en tendencia",
   "Popular TV": "Series populares",
-  "Top Rated TV": "Series mejor valoradas",
+  "Top 10 Movies (US)": "Top 10 películas (EE. UU.)",
+  "Top 10 TV (US)": "Top 10 series (EE. UU.)",
   "Continue Watching": "Continuar viendo",
   "My Trakt Watchlist": "Mi lista de Trakt"
 };
@@ -1358,7 +1353,9 @@ async function loadCatalogs() {
     container.appendChild(row);
     try {
       const data = await tmdbFetch(cat.endpoint, cat.params || {});
-      renderRowCards(row, (data.results || []).map(normalizeItem));
+      let items = (data.results || []).map(normalizeItem);
+      if (cat.limit) items = items.slice(0, cat.limit);
+      renderRowCards(row, items);
     } catch (err) {
       row.querySelector(".row-scroll,.row-loading").innerHTML =
         `<div class="message" style="padding:20px"><h3>${t("failedLoad")}</h3><p>${esc(err.message)}</p></div>`;
