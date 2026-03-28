@@ -979,8 +979,10 @@ function parseQuality(title) {
 function audioScore(title) {
   const t = (title || "").toLowerCase();
   if (currentIsAnime) {
-    if (/dual.?audio|multi/i.test(t)) return 0;
-    if (/japanese|jpn|ja\b/i.test(t)) return 1;
+    const isJpn = /japanese|jpn|ja\b/i.test(t);
+    const isDual = /dual.?audio|multi/i.test(t);
+    if (isJpn && !isDual) return 0;
+    if (isDual) return 1;
     return 2;
   }
   if (currentOriginalLang && currentOriginalLang !== "en") {
