@@ -273,6 +273,7 @@ input,select{font-family:inherit}
 /* ── TRAKT ── */
 .btn-trakt{width:100%;padding:12px;border-radius:20px;background:#ed1c24;color:#fff;font-weight:600;font-size:.85rem;transition:all .2s;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px}
 .btn-trakt:hover{opacity:.9}
+.btn-trakt-disconnect{margin-top:8px;width:100%;justify-content:center;font-size:.78rem;padding:8px;border-radius:16px}
 .trakt-status{font-size:.78rem;color:var(--text-dim);margin-bottom:16px;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid var(--glass-border);line-height:1.5}
 .trakt-status.connected{color:var(--green)}
 .trakt-device-code{font-size:1.6rem;font-weight:800;letter-spacing:4px;color:#fff;text-align:center;padding:16px;margin:8px 0;background:rgba(255,255,255,.06);border-radius:12px}
@@ -351,12 +352,11 @@ input,select{font-family:inherit}
 <!-- SETUP -->
 <div class="setup" id="setupScreen" style="display:none">
   <h1>Forward English</h1>
-  <p>A personal movie &amp; TV discovery dashboard. To get started, enter your TMDB API key. It's free — get one at <a href="https://www.themoviedb.org/settings/api" target="_blank">themoviedb.org</a>.</p>
+  <p>A personal movie &amp; TV discovery dashboard. To stream, add your Real-Debrid API key in Settings.</p>
   <div class="setup-input">
-    <input type="text" id="setupKeyInput" placeholder="Paste your TMDB API key">
-    <button class="btn-primary" id="setupSaveBtn">Save &amp; Go</button>
+    <input type="text" id="setupKeyInput" placeholder="Paste your Real-Debrid API key (optional)">
+    <button class="btn-primary" id="setupSaveBtn">Get Started</button>
   </div>
-  <p style="font-size:.82rem;margin-top:8px">Optional: configure a Debridio addon URL in Settings for streaming sources.</p>
 </div>
 
 <!-- MAIN -->
@@ -481,20 +481,15 @@ input,select{font-family:inherit}
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-panel">
     <h2>Settings</h2>
-    <label for="settingsKeyInput">TMDB API Key</label>
-    <input type="text" id="settingsKeyInput" placeholder="Your TMDB API key">
     <label for="settingsDebridInput">Debridio Addon URL</label>
     <input type="text" id="settingsDebridInput" placeholder="https://addon.debridio.com/eyJ...">
-    <div class="settings-hint">Paste your full Debridio manifest URL. Your config stays in this browser only.</div>
+    <div class="settings-hint">Configure at <a href="https://debridio.com" target="_blank" style="color:var(--accent-glow)">debridio.com</a>, paste the addon URL. Stored in this browser only.</div>
     <div class="settings-divider" style="height:1px;background:rgba(255,255,255,.06);margin:8px 0 20px"></div>
-    <label for="settingsTraktId">Trakt Client ID</label>
-    <input type="text" id="settingsTraktId" placeholder="Your Trakt app client ID">
-    <label for="settingsTraktSecret">Trakt Client Secret</label>
-    <input type="text" id="settingsTraktSecret" placeholder="Your Trakt app client secret">
-    <div class="settings-hint">Create a Trakt app at <a href="https://trakt.tv/oauth/applications" target="_blank" style="color:var(--accent-glow)">trakt.tv/oauth/applications</a> to get these.</div>
+    <label>Trakt</label>
     <div id="traktAuthSection">
-      <button class="btn-trakt" id="traktConnectBtn" style="display:none">Connect Trakt</button>
+      <button class="btn-trakt" id="traktConnectBtn">Login to Trakt</button>
       <div class="trakt-status" id="traktStatus" style="display:none"></div>
+      <button class="btn-outline btn-trakt-disconnect" id="traktDisconnectBtn" style="display:none">Disconnect</button>
     </div>
     <div class="settings-actions">
       <button class="btn-danger" id="settingsClearBtn">Clear All</button>
@@ -507,7 +502,10 @@ input,select{font-family:inherit}
 <script>
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_IMG = "https://image.tmdb.org/t/p/";
+const TMDB_KEY = "330ce6497554819b8c235f021cf221ed";
 const FORWARD_AI_URL = "https://fluxapi.vvebo.vip/v1/nlsearch/search";
+const TRAKT_CID = "65e1fbb8f37a3f62b7f43d54bfeb64acec0511803a1f8f46381484ab943649c7";
+const TRAKT_SEC = "71f323143e6110c6615e6d8dcb1ea1c65d1265464a7f63c25465199d1d7d19ab";
 
 const GENRE_MAP = {28:"Action",12:"Adventure",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",14:"Fantasy",36:"History",27:"Horror",10402:"Music",9648:"Mystery",10749:"Romance",878:"Science Fiction",10770:"TV Movie",53:"Thriller",10752:"War",37:"Western",10759:"Action & Adventure",10762:"Kids",10763:"News",10764:"Reality",10766:"Soap",10767:"Talk",10768:"War & Politics"};
 
@@ -522,10 +520,8 @@ const CATALOGS = [
   { title:"Top Rated TV",     endpoint:"/tv/top_rated" },
 ];
 
-let apiKey = localStorage.getItem("tmdb_api_key") || "";
+let apiKey = TMDB_KEY;
 let debridUrl = localStorage.getItem("debridio_url") || "";
-let traktClientId = localStorage.getItem("trakt_client_id") || "";
-let traktClientSecret = localStorage.getItem("trakt_client_secret") || "";
 let traktAccessToken = localStorage.getItem("trakt_access_token") || "";
 let traktRefreshToken = localStorage.getItem("trakt_refresh_token") || "";
 let traktWatchedSet = new Set();
@@ -555,25 +551,16 @@ const OPENSUBTITLES_BASE = "https://opensubtitles-v3.strem.io";
 
 // ── INIT ──
 function init() {
-  if (!apiKey) {
-    document.getElementById("setupScreen").style.display = "flex";
-    document.getElementById("mainContent").style.display = "none";
-  } else {
-    document.getElementById("setupScreen").style.display = "none";
-    document.getElementById("mainContent").style.display = "block";
-    loadCatalogs();
-    if (traktAccessToken) loadTraktData();
-  }
+  document.getElementById("setupScreen").style.display = "none";
+  document.getElementById("mainContent").style.display = "block";
+  loadCatalogs();
+  if (traktAccessToken) loadTraktData();
   bindEvents();
 }
 
 // ── EVENTS ──
 function bindEvents() {
-  document.getElementById("setupSaveBtn").addEventListener("click", () => {
-    const key = document.getElementById("setupKeyInput").value.trim();
-    if (!key) return;
-    apiKey = key;
-    localStorage.setItem("tmdb_api_key", key);
+  document.getElementById("setupSaveBtn")?.addEventListener("click", () => {
     init();
   });
 
@@ -593,39 +580,28 @@ function bindEvents() {
 
   // Settings
   document.getElementById("settingsBtn").addEventListener("click", () => {
-    document.getElementById("settingsKeyInput").value = apiKey;
     document.getElementById("settingsDebridInput").value = debridUrl;
-    document.getElementById("settingsTraktId").value = traktClientId;
-    document.getElementById("settingsTraktSecret").value = traktClientSecret;
     updateTraktSettingsUI();
     document.getElementById("settingsOverlay").classList.add("open");
   });
   document.getElementById("settingsCancelBtn").addEventListener("click", closeSettings);
   document.getElementById("settingsSaveBtn").addEventListener("click", () => {
-    const key = document.getElementById("settingsKeyInput").value.trim();
     const dUrl = document.getElementById("settingsDebridInput").value.trim();
-    if (key) { apiKey = key; localStorage.setItem("tmdb_api_key", key); }
     debridUrl = dUrl; localStorage.setItem("debridio_url", dUrl);
-    const tid = document.getElementById("settingsTraktId").value.trim();
-    const tsec = document.getElementById("settingsTraktSecret").value.trim();
-    traktClientId = tid; localStorage.setItem("trakt_client_id", tid);
-    traktClientSecret = tsec; localStorage.setItem("trakt_client_secret", tsec);
     closeSettings();
-    loadCatalogs();
   });
   document.getElementById("settingsClearBtn").addEventListener("click", () => {
-    localStorage.removeItem("tmdb_api_key");
     localStorage.removeItem("debridio_url");
-    localStorage.removeItem("trakt_client_id");
-    localStorage.removeItem("trakt_client_secret");
     localStorage.removeItem("trakt_access_token");
     localStorage.removeItem("trakt_refresh_token");
-    apiKey = ""; debridUrl = "";
-    traktClientId = ""; traktClientSecret = ""; traktAccessToken = ""; traktRefreshToken = "";
+    debridUrl = "";
+    traktAccessToken = ""; traktRefreshToken = "";
+    traktWatchedSet.clear(); traktWatchlistSet.clear();
     closeSettings();
-    init();
+    location.reload();
   });
   document.getElementById("traktConnectBtn").addEventListener("click", startTraktAuth);
+  document.getElementById("traktDisconnectBtn").addEventListener("click", disconnectTrakt);
   document.getElementById("btnTraktWatchlist").addEventListener("click", toggleTraktWatchlist);
   document.getElementById("btnTraktWatched").addEventListener("click", toggleTraktWatched);
   document.getElementById("settingsOverlay").addEventListener("click", (e) => {
@@ -1053,7 +1029,7 @@ function onWatchClick() {
     return;
   }
   if (!debridUrl) {
-    alert("No Debridio URL configured. Add it in Settings.");
+    alert("No Debridio addon URL configured. Add it in Settings.");
     return;
   }
   if (currentItem.mediaType === "tv" && !currentSelectedEpisode) {
@@ -1695,7 +1671,7 @@ function traktHeaders() {
   return {
     "Content-Type": "application/json",
     "trakt-api-version": "2",
-    "trakt-api-key": traktClientId,
+    "trakt-api-key": TRAKT_CID,
     ...(traktAccessToken ? { Authorization: `Bearer ${traktAccessToken}` } : {})
   };
 }
@@ -1703,31 +1679,30 @@ function traktHeaders() {
 function updateTraktSettingsUI() {
   const connectBtn = document.getElementById("traktConnectBtn");
   const status = document.getElementById("traktStatus");
-  const tid = document.getElementById("settingsTraktId").value.trim() || traktClientId;
-  const tsec = document.getElementById("settingsTraktSecret").value.trim() || traktClientSecret;
+  const disconnectBtn = document.getElementById("traktDisconnectBtn");
 
   if (traktAccessToken) {
     connectBtn.style.display = "none";
     status.style.display = "block";
     status.className = "trakt-status connected";
     status.innerHTML = "✓ Connected to Trakt";
-  } else if (tid && tsec) {
+    disconnectBtn.style.display = "block";
+  } else {
     connectBtn.style.display = "flex";
     status.style.display = "none";
-  } else {
-    connectBtn.style.display = "none";
-    status.style.display = "none";
+    disconnectBtn.style.display = "none";
   }
 }
 
+function disconnectTrakt() {
+  traktAccessToken = ""; traktRefreshToken = "";
+  localStorage.removeItem("trakt_access_token");
+  localStorage.removeItem("trakt_refresh_token");
+  traktWatchedSet.clear(); traktWatchlistSet.clear();
+  updateTraktSettingsUI();
+}
+
 async function startTraktAuth() {
-  const tid = document.getElementById("settingsTraktId").value.trim();
-  const tsec = document.getElementById("settingsTraktSecret").value.trim();
-  if (!tid || !tsec) { alert("Enter Trakt Client ID and Secret first."); return; }
-
-  traktClientId = tid; localStorage.setItem("trakt_client_id", tid);
-  traktClientSecret = tsec; localStorage.setItem("trakt_client_secret", tsec);
-
   const status = document.getElementById("traktStatus");
   const connectBtn = document.getElementById("traktConnectBtn");
   connectBtn.style.display = "none";
@@ -1739,7 +1714,7 @@ async function startTraktAuth() {
     const res = await fetch(`${TRAKT_API}/oauth/device/code`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ client_id: traktClientId })
+      body: JSON.stringify({ client_id: TRAKT_CID })
     });
     const data = await res.json();
     const { device_code, user_code, verification_url, expires_in, interval } = data;
@@ -1764,7 +1739,7 @@ async function startTraktAuth() {
         const tokenRes = await fetch(`${TRAKT_API}/oauth/device/token`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: device_code, client_id: traktClientId, client_secret: traktClientSecret })
+          body: JSON.stringify({ code: device_code, client_id: TRAKT_CID, client_secret: TRAKT_SEC })
         });
         if (tokenRes.status === 200) {
           clearInterval(poll);
@@ -1773,8 +1748,7 @@ async function startTraktAuth() {
           traktRefreshToken = tokenData.refresh_token || "";
           localStorage.setItem("trakt_access_token", traktAccessToken);
           localStorage.setItem("trakt_refresh_token", traktRefreshToken);
-          status.className = "trakt-status connected";
-          status.innerHTML = "✓ Connected to Trakt";
+          updateTraktSettingsUI();
           loadTraktData();
         }
       } catch (_) {}
@@ -1803,8 +1777,8 @@ async function refreshTraktToken() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         refresh_token: traktRefreshToken,
-        client_id: traktClientId,
-        client_secret: traktClientSecret,
+        client_id: TRAKT_CID,
+        client_secret: TRAKT_SEC,
         redirect_uri: "urn:ietf:wg:oauth:2.0:oob",
         grant_type: "refresh_token"
       })
